@@ -1,0 +1,88 @@
+run:
+  name: "stage1_foveation_smoke"
+  seed: 42
+  output_dir: "runs"
+
+dataset:
+  manifest_path: "data/stage1_smoke/manifest.jsonl"
+  image_dir: "data/stage1_smoke/images"
+  max_samples_per_dataset: 5
+  timeout_sec: 30
+  user_agent: "vfa-stage1-smoke/0.1"
+
+sources:
+  - dataset_id: "lmms-lab/DocVQA"
+    config: "DocVQA"
+    split: "validation"
+    offset: 0
+    length: 5
+    alias: "docvqa_val"
+    question_field: "question"
+    answer_field: "answers"
+    image_field: "image"
+    roi_source: "grid_or_center"
+
+  - dataset_id: "lmms-lab/textvqa"
+    config: "default"
+    split: "validation"
+    offset: 0
+    length: 5
+    alias: "textvqa_val"
+    question_field: "question"
+    answer_field: "answers"
+    image_field: "image"
+    roi_source: "ocr_tokens_no_boxes"
+
+  - dataset_id: "rootsautomation/RICO-ScreenQA"
+    config: "default"
+    split: "test"
+    offset: 0
+    length: 5
+    alias: "rico_screenqa_test"
+    question_field: "question"
+    answer_field: "ground_truth.full_answer"
+    image_field: "image"
+    roi_source: "ground_truth.ui_elements.bounds"
+
+  - dataset_id: "lmms-lab/ChartQA"
+    config: "default"
+    split: "test"
+    offset: 0
+    length: 5
+    alias: "chartqa_test"
+    question_field: "question"
+    answer_field: "answer"
+    image_field: "image"
+    roi_source: "grid_or_center"
+
+profiler:
+  device: "cuda"
+  dtype: "float16"
+  patch_size: 16
+  low_res: [336, 336]
+  full_res_max_side: 1344
+  roi_res: [336, 336]
+  roi_count: 1
+  model:
+    name: "patch_transformer_smoke"
+    embed_dim: 192
+    depth: 2
+    heads: 4
+    mlp_ratio: 2
+  baselines:
+    - baseline_id: "S1-A"
+      name: "low_res_only"
+      roi_mode: "none"
+    - baseline_id: "S1-B"
+      name: "random_roi"
+      roi_mode: "random"
+    - baseline_id: "S1-C"
+      name: "heuristic_roi"
+      roi_mode: "heuristic"
+    - baseline_id: "S1-D"
+      name: "oracle_roi_if_available"
+      roi_mode: "oracle"
+      only_if_oracle_available: true
+    - baseline_id: "S1-E"
+      name: "full_high_res"
+      roi_mode: "fullres"

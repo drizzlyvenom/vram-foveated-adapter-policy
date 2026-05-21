@@ -25,7 +25,7 @@ def main() -> int:
     print(f"wrote {summary_path}")
     for row in rows:
         print(
-            "{baseline_id} {source_baseline} n={n_samples} tokens={visual_tokens_mean} peak={peak_vram_mb_mean} adapter={adapter_resident_mb_mean}".format(
+            "{stage} {baseline_id} split={split} {source_baseline} n={n_samples} tokens={visual_tokens_mean} peak={peak_vram_mb_mean} adapter={adapter_resident_mb_mean}".format(
                 **row
             )
         )

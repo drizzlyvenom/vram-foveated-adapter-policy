@@ -50,6 +50,8 @@ Stage 0은 기존 3090 cost simulation 결과를 replay해 logging contract를 �
 - 실패 분석 playbook: `docs/failure_analysis_playbook.md`
 - Stage 0 설정: `configs/pilot_minimal.yaml`
 - Stage 1 데이터셋 후보: `docs/stage1_dataset_shortlist_ko.md`
+- Stage 0 closure: `docs/stage0_closure_report_ko.md`
+- Stage 1 closure: `docs/stage1_closure_report_ko.md`
 
 Stage 0은 기존 RTX 3090 cost simulation 결과를 새 logging contract로 replay하는 단계입니다. 실제 VLM profiler 측정은 Stage 1부터 진행합니다.
 
@@ -58,4 +60,11 @@ Stage 0 재현:
 ```powershell
 python -m pip install -r requirements.txt
 python scripts\run_pilot.py --config configs\pilot_minimal.yaml
+```
+
+Stage 1 smoke 재현:
+
+```powershell
+python scripts\prepare_stage1_dataset.py --config configs\stage1_foveation_smoke.yaml
+python scripts\run_stage1_foveation.py --config configs\stage1_foveation_smoke.yaml
 ```
