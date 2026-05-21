@@ -1,0 +1,32 @@
+# Local editor/app state
+.obsidian/
+
+# Local scratch and staged deletion area
+tmp/
+trashbin/
+local_workbench/
+
+# Python/cache artifacts
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Office/editor temp files
+~$*
+*.tmp
+*.bak
+
+# Generated render previews
+output/presentation/previews/
+output/presentation/previews_v2/
+output/presentation/current_check_previews/
+output/presentation/manual_review_previews/
+output/presentation/final_polish_review/
+output/presentation/text_review_render/
+
+# LaTeX/build scratch
+output/paper/build/
+output/paper/build_ko/
+
+# Nested standalone experiment repository
+output/experiment/3090_pilot_costsim/

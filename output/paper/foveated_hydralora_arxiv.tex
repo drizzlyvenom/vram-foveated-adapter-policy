@@ -1,0 +1,514 @@
+% arXiv can compile this with pdfLaTeX; add \pdfoutput=1 if an arXiv
+% upload specifically requests it for bitmap figures. It is omitted here so
+% the bundled Tectonic/XeTeX compiler can build the local preview.
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{cmap}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{microtype}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{enumitem}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage[colorlinks=true,allcolors=blue]{hyperref}
+
+\newtheorem{proposition}{Proposition}
+\newtheorem{assumption}{Assumption}
+
+\title{Foveated Local Loops with HydraLoRA:\\
+A VRAM-Constrained Vision World Model for Local Evidence Acquisition}
+
+\author{Author information omitted for draft}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Vision world models are usually discussed as compact latent predictors, yet real visual reasoning often depends on small local evidence: a pin label, a trace junction, a polarity marker, or a subtle defect.
+Processing every pixel at uniformly high resolution is wasteful under consumer-GPU memory constraints, while processing only crops discards the global context that makes local evidence meaningful.
+We propose a foveated world-model architecture that separates a low-resolution global peripheral loop from high-resolution local loops.
+The global loop maintains a predictive latent state, coarse topology, uncertainty, and task context; the local loops inspect a small set of regions of interest (ROIs), extract typed evidence, and update a graph-like memory.
+To make local visual specialization practical, we reorganize a Simula-trained Local LoRA Bank into a HydraLoRA-style shared-$A$/multi-$B$ expert structure with certified bundle routing.
+We provide a mathematical formulation for token-aware VRAM budgeting, adapter parameter savings, top-$k$ expert routing, residual-driven synthetic curriculum construction, and graph-memory updates.
+The paper is positioned as a compact research proposal and experimental protocol for circuit-diagram and PCB understanding, a domain where global topology and tiny local cues interact strongly.
+\end{abstract}
+
+\section{Introduction}
+
+The motivating question is simple: can a vision world model keep the whole scene in memory while spending high-resolution computation only where evidence is needed?
+This question matters in domains such as circuit diagrams and PCB inspection, where a low-resolution image may preserve the global layout but erase the small evidence that determines graph structure, polarity, part identity, or defect status.
+A uniform high-resolution pass is expensive in visual tokens, activation memory, and key-value (KV) cache.
+A crop-only pipeline is cheaper but risks losing the peripheral context required to decide which crop matters and how its evidence should update the world state.
+
+We propose \emph{Foveated Local Loops with HydraLoRA}, a VRAM-aware perception architecture.
+The system has a low-resolution global loop, a high-recall ROI proposal loop, a high-resolution local loop, a HydraLoRA-based local-skill router, a typed evidence extractor, and a graph-memory update loop.
+The architecture draws conceptual support from world models and JEPA-style latent prediction \citep{ha2018worldmodels,hafner2023dreamerv3,assran2023ijepa,bardes2024vjepa,maes2026leworldmodel}, low-rank adaptation \citep{hu2021lora,dettmers2023qlora}, HydraLoRA \citep{tian2024hydralora}, and reasoning-driven synthetic data generation \citep{davidson2026simula}.
+
+The main contribution of this draft is not a new empirical result.
+Instead, it turns the existing architecture notes into a mathematically specified workshop-style paper:
+\begin{enumerate}[leftmargin=*]
+  \item a formal foveated observation model for global state, ROI crops, typed evidence, and graph memory;
+  \item a token-aware VRAM budget that separates adapter memory from visual-token and KV-cache costs;
+  \item a HydraLoRA memory analysis for independent LoRA banks, shared-$A$ banks, and active top-$k$ routing;
+  \item a residual-driven objective that maps world-model prediction failures into Simula-style local training data;
+  \item an experimental protocol for circuit/PCB understanding under fixed memory budgets.
+\end{enumerate}
+
+\begin{figure}[t]
+  \centering
+  \setlength{\fboxsep}{8pt}
+  \fbox{%
+    \begin{minipage}{0.92\linewidth}
+      \centering
+      Low-res global loop
+      $\rightarrow$
+      ROI proposal
+      $\rightarrow$
+      high-res local crop
+      $\rightarrow$
+      HydraLoRA skill routing
+      $\rightarrow$
+      typed evidence
+      $\rightarrow$
+      graph/world-state update
+      $\rightarrow$
+      feedback to ROI proposal
+      \vspace{0.35em}
+
+      \small
+      Offline Simula skill forge:
+      residual mining
+      $\rightarrow$
+      taxonomy update
+      $\rightarrow$
+      synthetic ROI tasks
+      $\rightarrow$
+      critic filtering
+      $\rightarrow$
+      adapter training
+      $\rightarrow$
+      certified bundle registry.
+    \end{minipage}
+  }
+  \caption{High-level foveated loop used by the draft system: a low-resolution global state proposes local inspections, high-resolution crops produce evidence, and the evidence returns to memory and future ROI selection.}
+  \label{fig:foveated-loop}
+\end{figure}
+
+\section{Related Work}
+
+\paragraph{World models and latent prediction.}
+World models learn compact internal dynamics for perception and planning \citep{ha2018worldmodels,hafner2023dreamerv3}.
+JEPA-style methods predict in representation space rather than pixel space \citep{assran2023ijepa,bardes2024vjepa}.
+LeWorldModel (LeWM) is especially relevant because it trains a JEPA-style latent world model from pixels with a compact prediction objective and a Gaussian latent regularizer \citep{maes2026leworldmodel}.
+Our global loop borrows this latent-prediction view, but the target task here is local evidence acquisition in static or semi-static visual artifacts, not direct action-conditioned control.
+
+\paragraph{LoRA banks and HydraLoRA.}
+LoRA freezes a base weight matrix $W_0$ and learns a low-rank update $\Delta W = BA$ \citep{hu2021lora}.
+QLoRA further shows that quantized base weights and low-rank adapters can make training feasible under tight GPU memory budgets \citep{dettmers2023qlora}.
+However, a multi-skill LoRA bank introduces a new problem: even if each adapter is small, many adapters create resident-memory, loading, routing, and compatibility costs.
+HydraLoRA proposes an asymmetric shared-$A$/multi-$B$ structure for efficient fine-tuning \citep{tian2024hydralora}.
+We reinterpret that structure as an organizer for local visual skills.
+
+\paragraph{Synthetic curricula and local skill construction.}
+Simula frames synthetic data generation as a controllable mechanism design problem with taxonomy construction, global and local diversification, complexification, and critic filtering \citep{davidson2026simula}.
+In our setting, Simula is not a runtime reasoner.
+It is an offline skill forge that converts failure logs, graph conflicts, and uncertain ROI cases into local training tuples for adapters and routers.
+
+\section{Problem Formulation}
+
+Let $I_t \in \mathbb{R}^{H \times W \times 3}$ be an image or video frame at step $t$.
+For static circuit/PCB analysis, $t$ can index inspection iterations rather than physical time.
+The system keeps a global latent state $z_t \in \mathbb{R}^{d_z}$, a graph memory $G_t=(V_t,E_t,\psi_t)$, and an evidence table $\mathcal{E}_t$.
+Here $\psi_t$ stores beliefs over graph attributes such as component labels, pin connections, junction states, polarity, and defect annotations.
+
+\paragraph{Foveated observation.}
+The global loop observes a low-resolution image
+\begin{equation}
+  x_t^g = D_\rho(I_t),
+\end{equation}
+where $D_\rho$ downsamples by factor $\rho$.
+The ROI loop selects at most $K$ boxes
+\begin{equation}
+  \mathcal{R}_t = \{r_{t,1},\ldots,r_{t,k_t}\}, \qquad k_t \le K,
+\end{equation}
+and extracts high-resolution crops
+\begin{equation}
+  x_{t,j}^{\ell} = C(I_t,r_{t,j},m_j),
+\end{equation}
+where $m_j$ is an optional context margin.
+The full foveated observation is
+\begin{equation}
+  o_t = \left(x_t^g,\{x_{t,j}^{\ell}\}_{j=1}^{k_t},G_t,\mathcal{E}_t\right).
+\end{equation}
+
+\paragraph{Global latent prediction.}
+The global encoder $E_g$ and predictor $P$ define
+\begin{equation}
+  z_t = E_g(x_t^g,G_t), \qquad
+  \hat z_{t+1}=P(z_t,u_t),
+\end{equation}
+where $u_t$ is the current query, inspection action, or task context.
+Following the LeWM-style intuition, the global training objective includes a prediction term and a distributional anti-collapse regularizer:
+\begin{equation}
+  \mathcal{L}_{\mathrm{global}}
+  =
+  \left\|\hat z_{t+1} - \mathrm{sg}(z_{t+1})\right\|_2^2
+  +
+  \lambda_{\mathrm{sig}}\mathcal{D}_{\mathrm{sig}}(\{z_t\},\mathcal{N}(0,I)).
+  \label{eq:global-loss}
+\end{equation}
+The operator $\mathrm{sg}$ denotes stop-gradient when used in a teacher-target form.
+The regularizer $\mathcal{D}_{\mathrm{sig}}$ can be instantiated by random one-dimensional projections, comparing projected latent samples to a standard normal distribution.
+For this proposal, the exact LeWM regularizer is not re-derived; the important modeling role is to prevent collapsed global states while preserving a compact predictive latent.
+
+\paragraph{Residuals as local data signals.}
+A prediction residual is not only a scalar loss.
+We define a structured residual
+\begin{equation}
+  \delta_t =
+  \left[
+  d_z(\hat z_{t+1},z_{t+1}),
+  d_G(\hat G_{t+1},G_{t+1}),
+  1-\bar c_t,
+  \chi_{\mathrm{conflict}}(G_t,\mathcal{E}_t)
+  \right],
+  \label{eq:residual}
+\end{equation}
+where $d_z$ measures latent mismatch, $d_G$ measures graph inconsistency, $\bar c_t$ is mean evidence confidence, and $\chi_{\mathrm{conflict}}$ flags incompatible local claims.
+The offline Simula loop maps $\delta_t$ to taxonomy nodes, hard negatives, ROI labels, and required local skills.
+
+\section{Method}
+
+\subsection{Budget-Aware ROI Selection}
+
+Let $T_g$ be the number of visual tokens for the low-resolution global image and $T_j$ the token count for ROI crop $j$.
+For patch size $p$ and crop dimensions $h_j \times w_j$,
+\begin{equation}
+  T_j \approx \left\lceil \frac{h_j}{p} \right\rceil
+          \left\lceil \frac{w_j}{p} \right\rceil.
+\end{equation}
+The total visual-token count is
+\begin{equation}
+  T_{\mathrm{vis}} = T_g + \sum_{j=1}^{k_t} T_j.
+  \label{eq:tokens}
+\end{equation}
+
+The ROI scheduler assigns utility
+\begin{equation}
+  U(r)
+  =
+  \alpha u_{\mathrm{unc}}(r)
+  + \beta u_{\mathrm{task}}(r)
+  + \gamma u_{\mathrm{graph}}(r)
+  + \xi u_{\mathrm{failure}}(r)
+  - \eta c_{\mathrm{tok}}(r)
+  - \mu c_{\mathrm{adapt}}(r),
+  \label{eq:roi-utility}
+\end{equation}
+where the positive terms represent uncertainty, task relevance, graph conflict, and historical failure signals, while the negative terms estimate token and adapter costs.
+The selected ROI set solves a small budgeted selection problem:
+\begin{equation}
+  \mathcal{R}_t^\star
+  =
+  \arg\max_{\mathcal{R}\subseteq \mathcal{C}_t}
+  \sum_{r\in\mathcal{R}} U(r)
+  \quad
+  \mathrm{s.t.}
+  \quad
+  |\mathcal{R}|\le K,\quad
+  T_g+\sum_{r\in\mathcal{R}}T(r)\le T_{\max}.
+  \label{eq:roi-select}
+\end{equation}
+Here $\mathcal{C}_t$ is a high-recall candidate set.
+In the MVP design, $K=3$ follows the local orchestration notes.
+
+\subsection{VRAM Accounting}
+
+Peak memory is approximated as
+\begin{equation}
+  M_{\mathrm{peak}}
+  \approx
+  M_{\mathrm{base}}(q)
+  + M_{\mathrm{adapt}}(\mathcal{B}_t)
+  + M_{\mathrm{KV}}(T_{\mathrm{vis}})
+  + M_{\mathrm{act}}(B,T_{\mathrm{vis}})
+  + M_{\mathrm{misc}},
+  \label{eq:vram}
+\end{equation}
+where $q$ is base-model precision, $\mathcal{B}_t$ is the active certified adapter bundle, $B$ is batch size, and $M_{\mathrm{misc}}$ includes runtime allocator overhead.
+For a transformer with $L$ layers, hidden dimension $d$, batch size $B$, and KV precision $b_{\mathrm{kv}}$ bytes, a simple KV-cache estimate is
+\begin{equation}
+  M_{\mathrm{KV}}(T_{\mathrm{vis}})
+  \approx
+  2 L B T_{\mathrm{vis}} d\, b_{\mathrm{kv}}.
+  \label{eq:kv}
+\end{equation}
+This term is why the proposal treats visual-token routing as first-class: reducing adapter weights alone may not reduce peak VRAM if $T_{\mathrm{vis}}$ is large.
+
+\begin{proposition}[Foveated token ratio]
+For an image processed at full resolution $H\times W$ and patch size $p$, the approximate token count is $T_{\mathrm{full}}\approx HW/p^2$.
+If the foveated system uses a global image of size $H_g\times W_g$ and $K$ ROI crops of size $h\times w$, then
+\begin{equation}
+  \frac{T_{\mathrm{fov}}}{T_{\mathrm{full}}}
+  \approx
+  \frac{H_gW_g + Khw}{HW}.
+  \label{eq:fov-ratio}
+\end{equation}
+\end{proposition}
+
+\begin{proof}
+Using the same patch size $p$, the global token count is approximately $H_gW_g/p^2$ and each crop contributes $hw/p^2$ tokens.
+Dividing $T_{\mathrm{fov}}\approx (H_gW_g+Khw)/p^2$ by $T_{\mathrm{full}}\approx HW/p^2$ gives Eq.~\ref{eq:fov-ratio}.
+\end{proof}
+
+\subsection{HydraLoRA Local Skill Bank}
+
+For a frozen linear layer $W_0\in\mathbb{R}^{d_{\mathrm{out}}\times d_{\mathrm{in}}}$, an independent LoRA expert $i$ uses
+\begin{equation}
+  W_i = W_0 + \frac{\alpha}{r}B_iA_i,
+  \qquad
+  A_i\in\mathbb{R}^{r\times d_{\mathrm{in}}},
+  \quad
+  B_i\in\mathbb{R}^{d_{\mathrm{out}}\times r}.
+\end{equation}
+HydraLoRA shares $A$ and keeps skill-specific $B_i$ matrices:
+\begin{equation}
+  W(x)=W_0+\frac{\alpha}{r}\sum_{i\in S_k(x)}g_i(x)B_iA,
+  \label{eq:hydra}
+\end{equation}
+where $g_i(x)$ is a router score and $S_k(x)$ is the top-$k$ expert set.
+The router input combines global context, ROI embedding, ROI type hint, task instruction, complexity estimate, and registry metadata:
+\begin{equation}
+  g(x)=\mathrm{softmax}\left(R_\phi([z_t,h_j,\tau_j,q_t,c_j])\right).
+\end{equation}
+
+\begin{proposition}[Adapter parameter savings]
+For one adapted layer with $N$ experts and rank $r$, an independent LoRA bank has
+\begin{equation}
+  P_{\mathrm{bank}} = N r(d_{\mathrm{in}}+d_{\mathrm{out}})
+\end{equation}
+parameters, while a shared-$A$ HydraLoRA bank has
+\begin{equation}
+  P_{\mathrm{hydra}} = r d_{\mathrm{in}} + N r d_{\mathrm{out}}.
+\end{equation}
+If $d_{\mathrm{in}}=d_{\mathrm{out}}=d$, then
+\begin{equation}
+  \frac{P_{\mathrm{hydra}}}{P_{\mathrm{bank}}}=\frac{N+1}{2N}.
+  \label{eq:hydra-ratio}
+\end{equation}
+If only $k$ of the $N$ $B$ experts are active on GPU, the active adapter parameter ratio relative to a fully resident independent bank is
+\begin{equation}
+  \frac{P_{\mathrm{active}}}{P_{\mathrm{bank}}}=\frac{k+1}{2N}.
+  \label{eq:active-ratio}
+\end{equation}
+\end{proposition}
+
+\begin{proof}
+The independent bank stores $N$ copies of $A_i$ and $B_i$, giving $Nr d_{\mathrm{in}}+Nr d_{\mathrm{out}}$.
+The Hydra bank stores one $A$ and $N$ $B_i$ matrices, giving $rd_{\mathrm{in}}+Nr d_{\mathrm{out}}$.
+The square-layer ratio follows by substituting $d_{\mathrm{in}}=d_{\mathrm{out}}=d$.
+For active top-$k$ loading, one shared $A$ and $k$ $B_i$ matrices are resident, giving $rd+krd$ parameters and Eq.~\ref{eq:active-ratio}.
+\end{proof}
+
+\subsection{Router and Adapter Training}
+
+Each synthetic or real training item is represented as
+\begin{equation}
+  s =
+  (x^g,x^\ell,r,\tau,y,e,\Delta G,m),
+\end{equation}
+where $\tau$ is a Simula taxonomy path, $y$ is a task label, $e$ is typed local evidence, $\Delta G$ is the graph update label, and $m$ contains quality, complexity, and critic metadata.
+The total training objective is
+\begin{align}
+  \mathcal{L}
+  =&\;
+  \mathcal{L}_{\mathrm{evidence}}
+  + \lambda_G \mathcal{L}_{\mathrm{graph}}
+  + \lambda_R \mathcal{L}_{\mathrm{router}}
+  + \lambda_B \mathcal{L}_{\mathrm{balance}}
+  + \lambda_H \mathcal{L}_{\mathrm{entropy}}
+  \nonumber\\
+  &+
+  \lambda_D \mathcal{L}_{\mathrm{distill}}
+  + \lambda_M \left[\max(0,M_{\mathrm{peak}}-M_{\mathrm{budget}})\right]^2.
+  \label{eq:total-loss}
+\end{align}
+
+The router can be supervised by taxonomy-derived expert labels $q_i(s)$:
+\begin{equation}
+  \mathcal{L}_{\mathrm{router}}
+  =
+  -\sum_i q_i(s)\log g_i(s).
+\end{equation}
+To reduce expert collapse, we use a load-balancing term
+\begin{equation}
+  \mathcal{L}_{\mathrm{balance}}
+  =
+  N\sum_{i=1}^{N}
+  \left(\frac{1}{|\mathcal{D}|}\sum_{s\in\mathcal{D}}g_i(s)-\frac{1}{N}\right)^2.
+\end{equation}
+To let difficult samples use more experts while keeping easy samples cheap, we set a target entropy from normalized complexity $c(s)\in[0,1]$:
+\begin{equation}
+  H^\star(s)=H_{\min}+(H_{\max}-H_{\min})c(s),
+  \qquad
+  \mathcal{L}_{\mathrm{entropy}}=(H(g(s))-H^\star(s))^2.
+\end{equation}
+If a teacher independent LoRA bank exists, shared-$A$ distillation can be added:
+\begin{equation}
+  \mathcal{L}_{\mathrm{distill}}
+  =
+  \left\|
+  f_{\mathrm{hydra}}(x)-f_{\mathrm{bank}}(x)
+  \right\|_2^2.
+\end{equation}
+
+\subsection{Graph Memory Update}
+
+Local outputs are not treated as free-form text.
+They become typed evidence items
+\begin{equation}
+  e_j=(a_j,v_j,b_j,c_j,\mathcal{B}_j),
+\end{equation}
+where $a_j$ is an attribute or graph claim, $v_j$ its value, $b_j$ the bounding region, $c_j$ confidence, and $\mathcal{B}_j$ the adapter bundle used.
+For a graph proposition $y$ such as ``pin 1 connects to net N'', a log-odds update is
+\begin{equation}
+  \ell_{t+1}(y)
+  =
+  \ell_t(y)
+  +
+  \sum_{e_j\in\mathcal{E}_{t+1}}
+  w(e_j,y)
+  \log
+  \frac{p(e_j\mid y)}{p(e_j\mid \neg y)}
+  -
+  \Omega_{\mathrm{conflict}}(y,G_t).
+  \label{eq:graph-update}
+\end{equation}
+The belief is $b_{t+1}(y)=\sigma(\ell_{t+1}(y))$.
+Conflicts do not immediately force a conclusion; they raise future ROI utility through $u_{\mathrm{graph}}(r)$ in Eq.~\ref{eq:roi-utility}.
+
+\begin{proposition}[Calibrated evidence increases belief]
+If $\Omega_{\mathrm{conflict}}=0$, $w(e,y)>0$, and $p(e\mid y)>p(e\mid\neg y)$, then observing $e$ strictly increases the log-odds and belief of $y$.
+\end{proposition}
+
+\begin{proof}
+Under the stated conditions, the log-likelihood ratio in Eq.~\ref{eq:graph-update} is positive.
+Therefore $\ell_{t+1}(y)>\ell_t(y)$.
+Because the sigmoid function is strictly increasing, $b_{t+1}(y)>b_t(y)$.
+\end{proof}
+
+\subsection{Certified Bundle Registry}
+
+The runtime system is not allowed to combine arbitrary adapters or sweep scales.
+Let $b$ be a candidate bundle and let $\mathcal{V}$ be a validation set.
+We register $b$ only if
+\begin{align}
+  \mathrm{Score}(b;\mathcal{V}) &\ge \mathrm{Score}(\mathrm{base};\mathcal{V})+\epsilon_{\mathrm{task}},\\
+  \mathrm{Regress}(b;\mathcal{V}_{\mathrm{guard}}) &\le \epsilon_{\mathrm{reg}},\\
+  M_{\mathrm{peak}}(b) &\le M_{\mathrm{budget}},\\
+  L_{95}(b) &\le L_{\mathrm{budget}},\\
+  \mathrm{ConflictRate}(b) &\le \epsilon_{\mathrm{conflict}}.
+\end{align}
+Bundles failing these gates are quarantined rather than silently deleted.
+At inference time, router abstention is allowed:
+\begin{equation}
+  \max_i g_i(x)<\theta_{\mathrm{route}}
+  \quad\Rightarrow\quad
+  \mathrm{use\;base/generic\;fallback/human\;review}.
+\end{equation}
+
+\section{Offline Simula Skill Forge}
+
+The offline loop converts residuals into training data.
+Let $\tau$ be a taxonomy node and $D_t(\tau)$ the current training distribution over local cases.
+We update sampling priority from failure residuals:
+\begin{equation}
+  \pi_{t+1}(\tau)
+  =
+  \frac{
+  \pi_t(\tau)\exp(\rho\,\bar\delta_t(\tau))
+  }{
+  \sum_{\tau'}\pi_t(\tau')\exp(\rho\,\bar\delta_t(\tau'))
+  },
+  \label{eq:curriculum}
+\end{equation}
+where $\bar\delta_t(\tau)$ aggregates residual severity for examples mapped to node $\tau$.
+Synthetic data generation then targets high-priority nodes with local diversification, complexity control, hard negatives, and double-critic filtering.
+The resulting data includes ROI labels as first-class supervision, not merely final answers.
+
+\section{Experimental Protocol}
+
+\paragraph{Domain.}
+The primary evaluation domain is circuit diagrams and PCB imagery.
+This domain is graph-like, visually dense, and sensitive to tiny local evidence.
+Document and chart images can be included as secondary sanity checks because the orchestration notes already define document extraction and chart reading as neighboring skill families.
+
+\paragraph{Baselines.}
+We propose the following comparison set:
+\begin{enumerate}[leftmargin=*]
+  \item base VLM/world model, no local adapters;
+  \item full high-resolution input with no foveated routing;
+  \item foveated ROI routing without LoRA;
+  \item single monolithic LoRA;
+  \item independent skill-specific LoRA bank;
+  \item HydraLoRA shared-$A$ bank;
+  \item HydraLoRA with Simula taxonomy router;
+  \item HydraLoRA with visual-budget-aware top-$k$ active $B$ loading.
+\end{enumerate}
+
+\paragraph{Metrics.}
+Task quality should be measured by accuracy, macro F1, OCR accuracy, per-taxonomy accuracy, graph-edge F1, conflict resolution rate, and OOD accuracy.
+Memory and serving quality should be measured by adapter parameters, adapter resident VRAM, visual-token count, peak allocated VRAM, average VRAM, latency p50/p95, adapter load time, and router overhead.
+Router quality should be measured by router accuracy, top-$k$ hit rate, gate entropy, expert utilization, collapse rate, abstention rate, and fallback success rate.
+
+\paragraph{Ablations.}
+The key ablations are $N\in\{2,4,8,16\}$ experts, LoRA rank $r\in\{4,8,16,32\}$, top-$k\in\{1,2,4,\mathrm{all}\}$, with/without Simula complexity metadata, with/without load balancing, with/without certified registry rehearsal, and full-image high-resolution input versus ROI-routed input.
+
+\begin{table}[t]
+  \centering
+  \caption{Idealized square-layer adapter ratios. These ratios exclude activations, visual tokens, KV cache, and runtime allocator overhead.}
+  \label{tab:ratios}
+  \begin{tabular}{cccc}
+    \toprule
+    Experts $N$ & Full Hydra ratio $(N+1)/(2N)$ & Active top-1 ratio & Active top-2 ratio \\
+    \midrule
+    2  & 0.7500 & 0.5000 & 0.7500 \\
+    4  & 0.6250 & 0.2500 & 0.3750 \\
+    8  & 0.5625 & 0.1250 & 0.1875 \\
+    16 & 0.5313 & 0.0625 & 0.0938 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\section{Discussion}
+
+The mathematical analysis clarifies two claims that were implicit in the design notes.
+First, HydraLoRA mainly reduces adapter-bank memory and active adapter memory; it does not by itself guarantee low peak VRAM.
+Peak VRAM also depends on high-resolution visual tokens, activations, and KV cache.
+Therefore, the foveated token policy and the adapter policy must be evaluated separately.
+Second, the local loop is not a crop classifier.
+Its output is typed evidence that changes graph beliefs and future ROI utilities.
+This is why the architecture is better described as local evidence acquisition for a world model than as OCR plus adapters.
+
+The proposal also has clear risks.
+The A/B asymmetry observed in LLM HydraLoRA may be weaker in small vision or vision-language backbones.
+Synthetic data can induce shortcuts if taxonomy labels leak into visual style.
+Wrong expert routing may create more confident errors than base-only inference.
+Finally, if the base model lacks sufficient OCR or grounding ability, local adapters may not recover the missing capability.
+The certified registry, abstention, hard negatives, guard validation, and quarantine policy are meant to make these risks measurable rather than hidden.
+
+\section{Conclusion}
+
+We presented a mathematically specified draft for a VRAM-constrained foveated vision world model.
+The system preserves a low-resolution predictive global state, inspects a few high-resolution ROIs, routes local skill adapters through a HydraLoRA-style shared-$A$/multi-$B$ bank, extracts typed evidence, and updates graph memory.
+The strengthened formulation adds token-aware VRAM bounds, adapter memory propositions, router objectives, graph-belief updates, and Simula-driven residual curricula.
+This gives the project a clearer arXiv-style shape: a compact position paper and experimental protocol for local evidence acquisition under memory constraints.
+
+\bibliographystyle{unsrtnat}
+\bibliography{references}
+
+\end{document}
