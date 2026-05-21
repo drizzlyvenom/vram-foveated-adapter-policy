@@ -30,3 +30,11 @@ output/paper/build_ko/
 
 # Nested standalone experiment repository
 output/experiment/3090_pilot_costsim/
+
+# Local experiment outputs and downloaded datasets
+runs/
+data/
+hf_cache/
+
+# Raw handoff bundle copied into repo-ready docs/configs/schemas
+vfa_verification_guidelines/

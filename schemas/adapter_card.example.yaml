@@ -1,0 +1,54 @@
+adapter_id: "pcb_pin_label_v1_r8"
+base_model: "qwen2.5-vl-3b"
+slot: "V"  # V: vision, X: cross-modal/projector, L: language/reasoning
+
+structure:
+  type: "independent_lora"  # independent_lora | hydralora_shared_a | prompt_adapter | none
+  rank: 8
+  target_modules:
+    - "q_proj"
+    - "o_proj"
+  target_layers: "middle"
+
+taxonomy:
+  domain:
+    pcb_inspection: 0.94
+    circuit_diagram: 0.61
+    industrial_drawing: 0.32
+  evidence_type:
+    pin_label: 0.91
+    component_id: 0.55
+    polarity_marker: 0.31
+  visual_skill:
+    small_text: 0.88
+    symbol_recognition: 0.66
+    topology_grounding: 0.31
+  reasoning_style:
+    diagnostic: 0.72
+    stepwise: 0.60
+    concise_answer: 0.25
+
+capability_probe:
+  pin_label_accuracy: 0.82
+  small_text_ocr: 0.77
+  false_positive_rate: 0.09
+  general_regression: 0.02
+  hard_negative_score: 0.41
+
+serving:
+  resident_status: "warm"  # hot | warm | cold | unavailable
+  adapter_memory_mb: 12.4
+  estimated_latency_ms: 3.1
+  load_cost_ms: 28.0
+  evict_cost_ms: 4.0
+  compatible_bundle_ids:
+    - "pcb_x_grounding_v1"
+    - "structured_answer_lora_v1"
+
+certification:
+  status: "experimental"  # certified | experimental | quarantined
+  registry_version: "pilot-0"
+  conflict_rate: 0.06
+  calibration_score: 0.71
+  quarantine: false
+  notes: "Example card for schema validation; not a real adapter."

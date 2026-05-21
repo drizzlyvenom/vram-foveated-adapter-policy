@@ -1,0 +1,80 @@
+run:
+  name: "stage0_3090_costsim_replay"
+  seed: 42
+  n_samples: null
+  output_dir: "runs"
+
+hardware:
+  backend: "costsim_replay"  # costsim_replay | mock | cuda | mps | mlx | llama_cpp | ollama
+  device_name: "RTX 3090"
+  total_vram_mb: 24576
+  reserve_vram_mb: 2048
+
+model:
+  backbone: "Compact 7B 4-bit VLM proxy"
+  precision: "cost_model"
+  quantization: "4bit_proxy"
+
+dataset:
+  name: "3090_costsim_grid"
+  split: "costsim_prior"
+
+source:
+  measurement_source: "cost_model_3090"
+  source_kind: "existing_costsim_summary"
+  summary_csv: "output/experiment/3090_pilot_costsim/02_simulation_run/results/summary.csv"
+  aggregate_summary_csv: "output/experiment/3090_pilot_costsim/02_simulation_run/results/aggregate_summary.csv"
+  primary_case_summary_csv: "output/experiment/3090_pilot_costsim/02_simulation_run/results/primary_case_summary.csv"
+  allow_missing_source: false
+
+stages:
+  - stage_id: "0_3090_costsim_replay"
+    baselines:
+      - baseline_id: "S0-A"
+        source_baseline: "B0"
+        name: "low_res_only_3090_prior"
+        roi_mode: "none"
+        adapter_mode: "none"
+      - baseline_id: "S0-B"
+        source_baseline: "B1"
+        name: "full_high_res_3090_prior"
+        roi_mode: "fullres"
+        adapter_mode: "none"
+      - baseline_id: "S0-C"
+        source_baseline: "B2"
+        name: "foveated_roi_3090_prior"
+        roi_mode: "costsim_roi"
+        adapter_mode: "none"
+      - baseline_id: "S0-D"
+        source_baseline: "B4-lite"
+        name: "independent_adapter_bank_3090_prior"
+        roi_mode: "costsim_roi"
+        adapter_mode: "independent_bank"
+      - baseline_id: "S0-E"
+        source_baseline: "B5-lite"
+        name: "shared_adapter_bank_3090_prior"
+        roi_mode: "costsim_roi"
+        adapter_mode: "shared_bank"
+      - baseline_id: "S0-F"
+        source_baseline: "B7-lite"
+        name: "budget_policy_3090_prior"
+        roi_mode: "costsim_roi"
+        adapter_mode: "budget_policy"
+
+budgets:
+  max_peak_vram_mb: 22528
+  max_latency_ms: null
+  max_active_adapters_per_slot: 1
+  allow_token_level_switching: false
+
+logging:
+  write_manifest: true
+  write_route_traces: true
+  write_summary_csv: true
+  route_trace_schema: "schemas/route_trace.example.yaml"
+  preserve_source_columns: true
+
+notes:
+  - "Stage 0 replays or distills the existing RTX 3090 cost-simulation pilot."
+  - "This validates logging, schema compatibility, and cost-model directionality only."
+  - "It is not a real VLM profiler result."

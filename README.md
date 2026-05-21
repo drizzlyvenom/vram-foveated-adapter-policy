@@ -32,8 +32,8 @@ output/
 
 ## 현재 후속 방향
 
-발표 준비 단계는 마무리되었고, 다음 단계는 실험 환경을 확인한 뒤 작은 pilot으로 넘어가는 것입니다.
-Mac mini 또는 다른 테스트 머신을 사용할 경우, chip family, unified memory, macOS, storage, MPS/MLX/llama.cpp/Ollama 사용 가능 여부를 먼저 확인한 뒤 실험 범위를 좁힙니다.
+발표 준비 단계는 마무리되었고, 다음 단계는 RTX 3090에서 검증 가능한 pilot을 먼저 닫은 뒤 더 큰 장비로 확장하는 것입니다.
+Stage 0은 기존 3090 cost simulation 결과를 replay해 logging contract를 검증하고, Stage 1은 실제 VLM profiler로 foveation-only validation을 진행합니다.
 
 실험은 최고 정확도 경쟁보다 다음 항목을 분해 측정하는 방향으로 둡니다.
 
@@ -42,3 +42,20 @@ Mac mini 또는 다른 테스트 머신을 사용할 경우, chip family, unifie
 - p95 latency
 - orchestration reserve pass/fail
 - adapter routing hit/miss와 fallback 빈도
+
+## Verification Pilot
+
+- 검증 ladder: `docs/verification_ladder.md`
+- 측정/로그 계약: `docs/measurement_and_logging.md`
+- 실패 분석 playbook: `docs/failure_analysis_playbook.md`
+- Stage 0 설정: `configs/pilot_minimal.yaml`
+- Stage 1 데이터셋 후보: `docs/stage1_dataset_shortlist_ko.md`
+
+Stage 0은 기존 RTX 3090 cost simulation 결과를 새 logging contract로 replay하는 단계입니다. 실제 VLM profiler 측정은 Stage 1부터 진행합니다.
+
+Stage 0 재현:
+
+```powershell
+python -m pip install -r requirements.txt
+python scripts\run_pilot.py --config configs\pilot_minimal.yaml
+```

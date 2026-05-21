@@ -1,0 +1,60 @@
+stage1_datasets:
+  smoke_target_total: 100
+  download_policy:
+    mode: "sample_manifest_first"
+    local_data_dir: "data/stage1_smoke"
+    commit_downloaded_data: false
+    note: "Downloaded images and HF caches are local-only and ignored by git."
+
+  candidates:
+    - dataset_id: "lmms-lab/DocVQA"
+      config: "DocVQA"
+      split: "validation"
+      target_samples: 30
+      priority: 1
+      role: "document_or_chart_local_evidence"
+      answer_field: "answers"
+      image_field: "image"
+      question_field: "question"
+      roi_source: "grid_or_manual_oracle_subset"
+      stage1_use: ["low_res_only", "full_high_res", "grid_roi", "manual_oracle_subset"]
+
+    - dataset_id: "lmms-lab/textvqa"
+      config: "default"
+      split: "validation"
+      target_samples: 30
+      priority: 1
+      role: "ocr_local_text_evidence"
+      answer_field: "answers"
+      image_field: "image"
+      question_field: "question"
+      roi_source: "ocr_tokens"
+      stage1_use: ["low_res_only", "full_high_res", "grid_roi", "ocr_or_text_hint_roi"]
+
+    - dataset_id: "rootsautomation/RICO-ScreenQA"
+      config: "default"
+      split: "test"
+      target_samples: 20
+      priority: 1
+      role: "oracle_roi_sanity_check"
+      answer_field: "ground_truth.full_answer"
+      image_field: "image"
+      question_field: "question"
+      roi_source: "ground_truth.ui_elements.bounds"
+      stage1_use: ["low_res_only", "full_high_res", "grid_roi", "oracle_roi"]
+
+    - dataset_id: "lmms-lab/ChartQA"
+      config: "default"
+      split: "test"
+      target_samples: 20
+      priority: 2
+      role: "chart_axis_legend_value_reading"
+      answer_field: "answer"
+      image_field: "image"
+      question_field: "question"
+      roi_source: "grid_or_manual_oracle_subset"
+      stage1_use: ["low_res_only", "full_high_res", "grid_roi", "manual_oracle_subset"]
+
+  deferred:
+    - dataset_id: "kenza-ily/infographicvqa_disco"
+      reason: "Mini subset is attractive, but config/split access needs one more check before automation."

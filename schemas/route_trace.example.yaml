@@ -1,0 +1,58 @@
+sample_id: "sample_0001"
+step_id: 0
+stage: "0_3090_costsim_replay"
+baseline_id: "S0-A"
+split: "costsim_prior"
+query: "inspect the component label"
+
+evidence:
+  measurement_source: "cost_model_3090"
+  source_run_id: "costsim-00001"
+  source_baseline: "B0"
+  scientific_status: "feasibility_prior"
+
+input:
+  global_resolution: [336, 336]
+  roi_resolution: null
+  roi_count: 0
+
+routing:
+  router_type: "none"
+  selected_roi_id: null
+  selected_adapter_ids: []
+  confidence: null
+  abstained: false
+  fallback_used: false
+  reason_codes: []
+
+memory:
+  visual_token_count: 576
+  visual_token_count_source: "costsim_patch_count"
+  peak_vram_mb: 9357.12
+  avg_vram_mb: null
+  reserved_vram_mb: 2048.0
+  adapter_resident_mb: 0.0
+  kv_cache_estimate_mb: null
+  kv_cache_estimate_source: "not_modeled_in_stage0_costsim"
+  reserve_pass: true
+  reserve_headroom_mb: 11634.88
+
+timing:
+  total_latency_ms: 48.34
+  global_encode_ms: null
+  roi_encode_ms: 0.0
+  adapter_load_ms: 0.0
+  adapter_evict_ms: 0.0
+  generation_ms: null
+  verification_ms: 0.0
+
+quality:
+  task_score: null
+  answer_correct: null
+  verifier_score: null
+  verifier_pass: null
+  confidence: null
+
+failure:
+  main_failure_type: null
+  notes: null
