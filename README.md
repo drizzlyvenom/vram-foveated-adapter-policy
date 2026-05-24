@@ -27,6 +27,7 @@ Track B. FoveateR-style visual evidence compression
 - 3090 metrics contract: `docs/3090_metrics_contract_ko.md`
 - 3090 decision gates: `docs/3090_decision_gates_ko.md`
 - 3090 implementation plan: `docs/3090_codex_implementation_plan_ko.md`
+- latest local run status: `docs/latest_run_status_ko.md`
 - 3090 pilot config: `configs/3090_two_track_pilot.yaml`
 - 3090 adapter cards: `configs/3090_adapter_cards.yaml`
 - 3090 result schemas: `schemas/3090_residency_trace.example.yaml`, `schemas/3090_combined_validation_result.example.yaml`
@@ -58,6 +59,13 @@ RTX 3090 real CUDA memory-accounting smoke:
 
 ```powershell
 .venv\Scripts\python.exe scripts\run_3090_two_track_validation.py --config configs\3090_two_track_pilot.yaml --real-run --max-samples 4 --max-new-tokens 4
+```
+
+Real-task image smoke:
+
+```powershell
+python scripts\prepare_real_task_manifest.py --source picsum_highres --max-samples 4
+.venv\Scripts\python.exe scripts\run_3090_two_track_validation.py --config configs\3090_two_track_pilot.yaml --real-run --data-mode real_task_manifest --manifest data\real_task_smoke\manifest.jsonl --max-samples 2 --max-new-tokens 4
 ```
 
 주요 산출물은 실행별 `runs/<run_id>/combined_validation_result.json`, `summary.csv`, `route_traces.jsonl`, `result_summary_ko.md`, `short_paper_ko.md`에 기록됩니다.

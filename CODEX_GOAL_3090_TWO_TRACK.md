@@ -71,6 +71,7 @@ docs/3090_execution_ladder_ko.md
 docs/3090_metrics_contract_ko.md
 docs/3090_decision_gates_ko.md
 docs/3090_codex_implementation_plan_ko.md
+docs/latest_run_status_ko.md
 ```
 
 These config/schema files should remain active:
@@ -99,10 +100,12 @@ src/vfa_policy/core/validation_matrix.py
 src/vfa_policy/consolidation/specialist_baseline.py
 src/vfa_policy/consolidation/adapter_residency.py
 src/vfa_policy/foveation/roi_metrics.py
+src/vfa_policy/foveation/real_task_manifest.py
+scripts/prepare_real_task_manifest.py
 scripts/run_3090_two_track_validation.py
 ```
 
-The current scaffold emits dry-run JSON/CSV without loading a real model.
+The current scaffold emits dry-run JSON/CSV, real CUDA smoke artifacts, and real-task image smoke artifacts from a local manifest.
 
 ## Validation matrix
 

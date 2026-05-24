@@ -24,6 +24,7 @@ from vfa_policy.consolidation.adapter_residency import (
 )
 from vfa_policy.consolidation.specialist_baseline import estimate_specialist_baseline
 from vfa_policy.core.memory_accounting import (
+    DECODE_INCREMENTAL_PEAK_PROXY_SOURCE,
     compute_resident_saving,
     estimate_multi_specialist_residency,
     record_after_model_load,
@@ -36,6 +37,11 @@ from vfa_policy.core.validation_matrix import (
     summarize_3090_traces,
 )
 from vfa_policy.foveation.roi_metrics import visual_estimate
+from vfa_policy.foveation.real_task_manifest import (
+    load_task_manifest,
+    prepare_manifest_policy_images,
+    sample_for_index,
+)
 from vfa_policy.logging_utils import append_jsonl, ensure_run_dir, write_json, write_summary_csv
 
 
@@ -86,6 +92,15 @@ def _quality_score(cell_id: str, sample_index: int, *, fallback_executed: bool, 
 
 
 def _fallback_for(cell_id: str, sample_index: int, visual_policy: str) -> dict[str, Any]:
+    if visual_policy == "foveater_roi_controlled_fallback":
+        return {
+            "fallback_tier": "tier1_controlled_expensive",
+            "fallback_evaluated": True,
+            "fallback_executed": True,
+            "fallback_success": True,
+            "terminal_reason": "controlled_fallback_cell",
+            "visited_actions": ["fullres_same_shared_backbone"],
+        }
     if cell_id == "C4" and visual_policy == "foveater_roi" and sample_index % 5 == 0:
         return {
             "fallback_tier": "tier1_controlled_expensive",
@@ -148,6 +163,12 @@ def _prompt_for(taxonomy_label: str, visual_policy: str) -> str:
     )
 
 
+def _prompt_for_sample(task_sample: dict[str, Any] | None, taxonomy_label: str, visual_policy: str) -> str:
+    if task_sample and task_sample.get("prompt"):
+        return str(task_sample["prompt"])
+    return _prompt_for(taxonomy_label, visual_policy)
+
+
 def _real_visual_measurement(
     *,
     real_probe: Qwen3VLRealProbe | None,
@@ -156,17 +177,50 @@ def _real_visual_measurement(
     sample_index: int,
     taxonomy_label: str,
     max_new_tokens: int,
+    task_sample: dict[str, Any] | None = None,
+    image_paths: list[Path] | None = None,
 ) -> RealVisualMeasurement | None:
     if real_probe is None:
         return None
-    key = (visual_policy, sample_index)
+    sample_key = str(task_sample.get("sample_id")) if task_sample else f"sample_{sample_index:04d}"
+    key = (visual_policy, sample_index, sample_key)
     if key not in cache:
         cache[key] = real_probe.measure_visual_policy(
             visual_policy=visual_policy,
-            prompt=_prompt_for(taxonomy_label, visual_policy),
+            prompt=_prompt_for_sample(task_sample, taxonomy_label, visual_policy),
             max_new_tokens=max_new_tokens,
+            image_paths_override=image_paths,
         )
     return cache[key]
+
+
+def _data_mode(config: dict[str, Any]) -> str:
+    return str(config.get("data", {}).get("mode") or "synthetic_probe")
+
+
+def _roi_source(config: dict[str, Any], *, dry_run: bool) -> str:
+    configured = config.get("data", {}).get("roi_source")
+    if configured:
+        return str(configured)
+    return "dry_run_estimate" if dry_run else "synthetic_probe"
+
+
+def _adapter_execution_mode(config: dict[str, Any], selected_adapter_id: str | None) -> str:
+    if not selected_adapter_id:
+        return "shared_backbone_only"
+    return str(config.get("adapter_bank", {}).get("execution_mode") or "proxy_card_accounting")
+
+
+def _specialist_baseline_config(config: dict[str, Any]) -> dict[str, Any]:
+    return dict(config.get("model_residency_axis", {}).get("M1_multi_specialist_baseline", {}))
+
+
+def _task_validation_level(data_mode: str, actual_task_score_available: bool) -> str:
+    if data_mode == "real_task_manifest":
+        return "real_task_validation" if actual_task_score_available else "real_task_image_smoke"
+    if data_mode == "stage1_smoke_manifest":
+        return "stage1_image_smoke"
+    return "smoke_or_proxy"
 
 
 def _trace_for_cell(
@@ -179,10 +233,15 @@ def _trace_for_cell(
     after_load,
     multi_specialist_estimate_mb: float | None,
     real_probe: Qwen3VLRealProbe | None = None,
-    real_measurement_cache: dict[tuple[str, int], RealVisualMeasurement] | None = None,
+    real_measurement_cache: dict[tuple[str, int, str], RealVisualMeasurement] | None = None,
+    task_sample: dict[str, Any] | None = None,
     max_new_tokens: int = 4,
 ) -> dict[str, Any]:
-    taxonomy_label = TAXONOMY_SEQUENCE[sample_index % len(TAXONOMY_SEQUENCE)]
+    taxonomy_label = (
+        str(task_sample.get("taxonomy_label"))
+        if task_sample and task_sample.get("taxonomy_label")
+        else TAXONOMY_SEQUENCE[sample_index % len(TAXONOMY_SEQUENCE)]
+    )
     selected_adapter, top1_hit = _selected_adapter(
         adapter_cards=adapter_cards,
         taxonomy_label=taxonomy_label,
@@ -195,11 +254,25 @@ def _trace_for_cell(
         "M3_shared_backbone_taxonomy_lora",
         "M4_hydralora_estimate",
     }
+    dry_run = real_probe is None
+    data_mode = _data_mode(config)
+    roi_source = _roi_source(config, dry_run=dry_run)
+    adapter_execution_mode = _adapter_execution_mode(config, selected_adapter_id)
+    specialist_baseline = _specialist_baseline_config(config)
 
     bank_mb = adapter_bank_resident_mb(adapter_cards) if uses_lora_bank else 0.0
     active_mb = active_adapter_resident_mb(adapter_cards, selected_adapter_id) if selected_adapter_id else 0.0
     lora_switch_ms = lora_switch_latency_ms(adapter_cards, selected_adapter_id) if selected_adapter_id else None
     real_measurement_cache = real_measurement_cache if real_measurement_cache is not None else {}
+    image_paths_override = None
+    if task_sample and real_probe:
+        image_paths_override, roi_source = prepare_manifest_policy_images(
+            sample=task_sample,
+            sample_index=sample_index,
+            visual_policy=cell.visual_policy,
+            run_dir=real_probe.run_dir,
+            repo_root=REPO_ROOT,
+        )
     real_measurement = _real_visual_measurement(
         real_probe=real_probe,
         cache=real_measurement_cache,
@@ -207,6 +280,8 @@ def _trace_for_cell(
         sample_index=sample_index,
         taxonomy_label=taxonomy_label,
         max_new_tokens=max_new_tokens,
+        task_sample=task_sample,
+        image_paths=image_paths_override,
     )
     visual = dict(real_measurement.visual) if real_measurement else visual_estimate(cell.visual_policy)
     if real_measurement:
@@ -214,7 +289,8 @@ def _trace_for_cell(
         if cell.visual_policy == "full_image":
             full_reference_tokens = visual.get("visual_token_count")
         else:
-            full_cached = real_measurement_cache.get(("full_image", sample_index))
+            sample_key = str(task_sample.get("sample_id")) if task_sample else f"sample_{sample_index:04d}"
+            full_cached = real_measurement_cache.get(("full_image", sample_index, sample_key))
             if full_cached:
                 full_reference_tokens = full_cached.visual.get("visual_token_count")
         if full_reference_tokens:
@@ -232,6 +308,18 @@ def _trace_for_cell(
             sample_index=sample_index,
             taxonomy_label=taxonomy_label,
             max_new_tokens=max_new_tokens,
+            task_sample=task_sample,
+            image_paths=(
+                prepare_manifest_policy_images(
+                    sample=task_sample,
+                    sample_index=sample_index,
+                    visual_policy="full_image",
+                    run_dir=real_probe.run_dir,
+                    repo_root=REPO_ROOT,
+                )[0]
+                if task_sample and real_probe
+                else None
+            ),
         )
         if full_measurement:
             controlled_extra = max(
@@ -252,8 +340,18 @@ def _trace_for_cell(
     decode_incremental_peak_mb = (
         float(real_measurement.memory["decode_incremental_peak_mb"]) if real_measurement else 160.0
     )
+    generate_extra_peak_over_prefill_mb = (
+        float(real_measurement.memory["generate_extra_peak_over_prefill_mb"])
+        if real_measurement
+        else decode_incremental_peak_mb
+    )
     measurement_source = (
         str(real_measurement.memory["measurement_source"]) if real_measurement else "dry_run_config_estimate"
+    )
+    decode_incremental_peak_source = (
+        str(real_measurement.memory.get("decode_incremental_peak_source", DECODE_INCREMENTAL_PEAK_PROXY_SOURCE))
+        if real_measurement
+        else "dry_run_generate_extra_proxy"
     )
     memory = record_peak_memory(
         after_load=after_load,
@@ -261,9 +359,11 @@ def _trace_for_cell(
         active_adapter_resident_mb=active_mb,
         visual_incremental_peak_mb=visual_incremental_peak_mb,
         decode_incremental_peak_mb=decode_incremental_peak_mb,
+        generate_extra_peak_over_prefill_mb=generate_extra_peak_over_prefill_mb,
         controlled_fallback_extra_mb=controlled_extra,
         emergency_fallback_extra_mb=emergency_extra,
         measurement_source=measurement_source,
+        decode_incremental_peak_source=decode_incremental_peak_source,
     ).to_dict()
     if real_measurement:
         memory.update(
@@ -271,6 +371,9 @@ def _trace_for_cell(
                 "actual_cuda_prefill_peak_mb": real_measurement.memory["prefill_peak_abs_mb"],
                 "actual_cuda_generate_peak_mb": real_measurement.memory["generate_peak_abs_mb"],
                 "generate_incremental_peak_mb": real_measurement.memory["generate_incremental_peak_mb"],
+                "generate_extra_peak_over_prefill_mb": real_measurement.memory[
+                    "generate_extra_peak_over_prefill_mb"
+                ],
                 "prefill_baseline_allocated_mb": real_measurement.memory["prefill_baseline_allocated_mb"],
                 "generate_baseline_allocated_mb": real_measurement.memory["generate_baseline_allocated_mb"],
             }
@@ -295,12 +398,20 @@ def _trace_for_cell(
     model_swap_ms = 4000.0
     model_load_ms = real_probe.load_result.model_load_latency_ms if real_probe else model_swap_ms
     mode_switch_ms = lora_switch_ms if lora_switch_ms is not None else model_swap_ms
+    sample_id = (
+        str(task_sample.get("sample_id"))
+        if task_sample and task_sample.get("sample_id")
+        else f"sample_{sample_index:04d}"
+    )
+    actual_task_score_available = False
+    task_validation_level = _task_validation_level(data_mode, actual_task_score_available)
     return {
         "schema_version": "3090.route_trace.v0.1",
         "run_id": run_id,
-        "sample_id": f"sample_{sample_index:04d}",
+        "sample_id": sample_id,
         "stage": "R0_R4_cuda_combined_pilot" if real_probe else "R4_combined_two_track_pilot",
         "measurement_mode": "real_cuda" if real_probe else "dry_run_proxy",
+        "data_mode": data_mode,
         "matrix_cell": cell.id,
         "model_axis": cell.model_axis,
         "visual_axis": cell.visual_axis,
@@ -318,8 +429,16 @@ def _trace_for_cell(
             "model_load_latency_ms": model_load_ms,
             "model_swap_latency_ms": model_swap_ms,
             "lora_switch_latency_ms": lora_switch_ms,
-            "adapter_execution_mode": (
-                "proxy_card_accounting_no_lora_weights" if selected_adapter_id else "shared_backbone_only"
+            "adapter_execution_mode": adapter_execution_mode,
+            "resident_estimate_method": specialist_baseline.get(
+                "resident_estimate_method",
+                "same_backbone_after_load_times_count",
+            ),
+            "measured_sequential_swap_available": bool(
+                specialist_baseline.get("measured_sequential_swap_available", False)
+            ),
+            "measured_joint_residency_available": bool(
+                specialist_baseline.get("measured_joint_residency_available", False)
             ),
         },
         "visual_evidence": visual,
@@ -341,9 +460,22 @@ def _trace_for_cell(
             "lora_switch_latency_ms": lora_switch_ms,
             "adapter_bank_resident_mb": bank_mb,
             "active_adapter_count": 1 if selected_adapter_id else 0,
+            "resident_estimate_method": specialist_baseline.get(
+                "resident_estimate_method",
+                "same_backbone_after_load_times_count",
+            ),
+            "measured_sequential_swap_available": bool(
+                specialist_baseline.get("measured_sequential_swap_available", False)
+            ),
+            "measured_joint_residency_available": bool(
+                specialist_baseline.get("measured_joint_residency_available", False)
+            ),
         },
         "quality": {
             "task_score": task_score,
+            "proxy_task_score": task_score,
+            "task_score_source": "synthetic_proxy",
+            "actual_task_score_available": actual_task_score_available,
             "answer_correct": task_score >= 0.80,
             "score_retention_vs_oracle_lora": round(task_score / 0.845, 6),
             "score_retention_vs_full_specialist": None,
@@ -353,6 +485,21 @@ def _trace_for_cell(
             "confidence": task_score,
             "confidence_source": "proxy_score_no_ground_truth",
             "answer_preview": real_measurement.answer_text[:500] if real_measurement else None,
+        },
+        "source": {
+            "memory_source": measurement_source,
+            "visual_token_source": visual.get("visual_token_count_source"),
+            "quality_source": "synthetic_proxy",
+            "adapter_memory_source": "adapter_card_estimate",
+            "adapter_execution_mode": adapter_execution_mode,
+            "roi_source": roi_source,
+            "data_mode": data_mode,
+            "specialist_baseline_source": specialist_baseline.get(
+                "resident_estimate_method",
+                "same_backbone_after_load_times_count",
+            ),
+            "task_validation_level": task_validation_level,
+            "source_dataset": task_sample.get("source_dataset") if task_sample else None,
         },
         "routing": {
             "router_type": "none" if selected_adapter_id is None else ("oracle" if cell.model_axis.endswith("oracle_lora") else "taxonomy_card"),
@@ -414,6 +561,7 @@ def _combined_result(
         "schema_version": "3090.combined_validation_result.v0.1",
         "run_id": run_id,
         "measurement_mode": "real_cuda" if any(t.get("measurement_mode") == "real_cuda" for t in traces) else "dry_run_proxy",
+        "data_mode": _data_mode(config),
         "hardware": {
             "gpu": config.get("hardware", {}).get("target_gpu"),
             "vram_budget_mb": config.get("hardware", {}).get("vram_budget_mb"),
@@ -428,6 +576,9 @@ def _combined_result(
         "matrix_cells": cell_rows,
         "resident_summary": {
             "multi_specialist_resident_estimate_mb": resident_baseline.get("multi_specialist_resident_estimate_mb"),
+            "resident_estimate_method": resident_baseline.get("resident_estimate_method"),
+            "measured_sequential_swap_available": resident_baseline.get("measured_sequential_swap_available"),
+            "measured_joint_residency_available": resident_baseline.get("measured_joint_residency_available"),
             "shared_backbone_plus_lora_bank_resident_mb": (
                 (c4.get("base_after_load_allocated_mb_mean") or 0.0)
                 + (c4.get("adapter_bank_resident_mb_mean") or 0.0)
@@ -439,6 +590,7 @@ def _combined_result(
         "visual_summary": {
             "full_visual_token_count_mean": c0.get("visual_token_count_mean"),
             "foveated_visual_token_count_mean": c4.get("visual_token_count_mean"),
+            "roi_source": next((t.get("source", {}).get("roi_source") for t in traces), None),
             "visual_token_reduction_vs_full": (
                 round(1.0 - (c4.get("visual_token_count_mean") / c0.get("visual_token_count_mean")), 6)
                 if c0.get("visual_token_count_mean") and c4.get("visual_token_count_mean")
@@ -462,6 +614,15 @@ def _combined_result(
             "normal_path_peak_mb_mean": c4.get("normal_path_peak_mb_mean"),
             "controlled_fallback_peak_mb_mean": c4.get("controlled_fallback_peak_mb_mean"),
             "emergency_peak_mb_mean": c4.get("emergency_peak_mb_mean"),
+        },
+        "source_summary": {
+            "memory_source": next((t.get("source", {}).get("memory_source") for t in traces), None),
+            "visual_token_source": next((t.get("source", {}).get("visual_token_source") for t in traces), None),
+            "quality_source": "synthetic_proxy",
+            "adapter_memory_source": "adapter_card_estimate",
+            "adapter_execution_mode": config.get("adapter_bank", {}).get("execution_mode", "proxy_card_accounting"),
+            "data_mode": _data_mode(config),
+            "roi_source": next((t.get("source", {}).get("roi_source") for t in traces), None),
         },
         "gates": gates,
     }
@@ -489,10 +650,12 @@ def _write_korean_reports(
     c0 = row("C0")
     c4 = row("C4")
     measurement_label = "dry-run/proxy" if dry_run else "real CUDA"
+    data_mode = str(combined.get("data_mode") or "synthetic_probe")
     result_summary = f"""# 3090 투트랙 검증 결과 요약
 
 - run_id: `{combined.get("run_id")}`
 - measurement mode: `{measurement_label}`
+- data mode: `{data_mode}`
 - completion_gate: `{combined.get("gates", {}).get("completion_gate")}`
 - measurement_gate: `{combined.get("gates", {}).get("measurement_gate")}`
 - promotion_gate: `{combined.get("gates", {}).get("promotion_gate")}`
@@ -511,6 +674,7 @@ def _write_korean_reports(
 이 결과는 RTX 3090 단일 장비에서 memory accounting과 feasibility를 확인하기 위한 파일입니다.
 trained LoRA 성능 향상, 최종 benchmark superiority, production p99 serving claim은 주장하지 않습니다.
 Foveation은 resident backbone memory가 아니라 visual token, prefill, KV/cache 계열 비용을 줄이는 축으로만 해석합니다.
+현재 quality score는 실제 task accuracy가 아니라 synthetic proxy입니다. `data_mode={data_mode}`는 실제 이미지 smoke 여부를 나타내지만, 실제 task score가 없는 run은 final validation으로 승격하지 않습니다.
 """
 
     short_paper = f"""# 저 VRAM 비전 추론을 위한 공유 백본-어댑터 및 Foveated Evidence 투트랙 검증
@@ -531,11 +695,11 @@ Track B는 visual evidence compression이다. full image, low-res only, foveated
 
 ## RTX 3090 검증 프로토콜
 
-본 run은 `{measurement_label}` 모드로 실행되었다. 산출물은 `combined_validation_result.json`, `summary.csv`, `route_traces.jsonl`이다. 각 trace는 base-after-load memory, adapter resident estimate, visual incremental peak, decode incremental peak, fallback peak, route/failure label을 포함한다.
+본 run은 `{measurement_label}` 모드, `{data_mode}` data mode로 실행되었다. 산출물은 `combined_validation_result.json`, `summary.csv`, `route_traces.jsonl`이다. 각 trace는 base-after-load memory, adapter resident estimate, visual incremental peak, generate-extra-over-prefill peak, fallback peak, route/failure label을 포함한다.
 
 ## 측정 결과
 
-C0 full-image visual token mean은 {_fmt(c0.get("visual_token_count_mean"))}이고, C4 taxonomy LoRA + foveated ROI visual token mean은 {_fmt(c4.get("visual_token_count_mean"))}이다. C4 normal path peak mean은 {_fmt(c4.get("normal_path_peak_mb_mean"), " MB")}로 기록되었다. shared backbone + LoRA bank resident estimate는 {_fmt(combined.get("resident_summary", {}).get("shared_backbone_plus_lora_bank_resident_mb"), " MB")}이며, multi-specialist resident estimate는 {_fmt(combined.get("resident_summary", {}).get("multi_specialist_resident_estimate_mb"), " MB")}이다.
+C0 full-image visual token mean은 {_fmt(c0.get("visual_token_count_mean"))}이고, C4 taxonomy LoRA + foveated ROI visual token mean은 {_fmt(c4.get("visual_token_count_mean"))}이다. C4 normal path peak mean은 {_fmt(c4.get("normal_path_peak_mb_mean"), " MB")}로 기록되었다. shared backbone + LoRA bank resident estimate는 {_fmt(combined.get("resident_summary", {}).get("shared_backbone_plus_lora_bank_resident_mb"), " MB")}이며, multi-specialist resident estimate는 {_fmt(combined.get("resident_summary", {}).get("multi_specialist_resident_estimate_mb"), " MB")}이다. 이 품질 수치는 실제 benchmark score가 아니라 synthetic proxy다.
 
 ## 실패 분석
 
@@ -560,6 +724,8 @@ def main() -> int:
     parser.add_argument("--max-samples", type=int, default=None)
     parser.add_argument("--dry-run", action="store_true", help="Force dry-run mode even if config changes later.")
     parser.add_argument("--real-run", action="store_true", help="Load the local Qwen3-VL snapshot and record CUDA memory.")
+    parser.add_argument("--data-mode", choices=["synthetic_probe", "stage1_smoke_manifest", "real_task_manifest"])
+    parser.add_argument("--manifest", help="JSONL manifest for stage1_smoke_manifest or real_task_manifest mode.")
     parser.add_argument("--max-new-tokens", type=int, default=4, help="Decode tokens used by the real CUDA probe.")
     args = parser.parse_args()
     if args.dry_run and args.real_run:
@@ -571,6 +737,10 @@ def main() -> int:
         config.setdefault("run", {})["dry_run"] = True
     if args.real_run:
         config.setdefault("run", {})["dry_run"] = False
+    if args.data_mode:
+        config.setdefault("data", {})["mode"] = args.data_mode
+    if args.manifest:
+        config.setdefault("data", {})["manifest_path"] = args.manifest
     if args.max_samples is not None:
         config.setdefault("run", {})["max_samples"] = args.max_samples
 
@@ -578,6 +748,40 @@ def main() -> int:
     run_dir = ensure_run_dir(run_id, config.get("run", {}).get("output_dir", "runs"))
     trace_path = run_dir / "route_traces.jsonl"
     dry_run = bool(config.get("run", {}).get("dry_run", True))
+    data_mode = _data_mode(config)
+    manifest_samples: list[dict[str, Any]] = []
+    if data_mode in {"stage1_smoke_manifest", "real_task_manifest"}:
+        manifest_path = config.get("data", {}).get("manifest_path")
+        if not manifest_path:
+            failure = {
+                "run_id": run_id,
+                "stage": "manifest_loading",
+                "completion_gate": False,
+                "measurement_gate": False,
+                "promotion_gate": False,
+                "error_type": "MissingManifestPath",
+                "error_message": f"data.mode={data_mode} requires data.manifest_path or --manifest.",
+                "next_action": "Run scripts/prepare_real_task_manifest.py or pass a manifest JSONL path.",
+            }
+            write_json(run_dir / "manifest_failure.json", failure)
+            print(json.dumps({"run_dir": str(run_dir), **failure}, ensure_ascii=False))
+            return 2
+        try:
+            manifest_samples = load_task_manifest(manifest_path, repo_root=REPO_ROOT)
+        except Exception as exc:
+            failure = {
+                "run_id": run_id,
+                "stage": "manifest_loading",
+                "completion_gate": False,
+                "measurement_gate": False,
+                "promotion_gate": False,
+                "error_type": type(exc).__name__,
+                "error_message": str(exc),
+                "next_action": "Fix manifest paths/schema before running real task smoke.",
+            }
+            write_json(run_dir / "manifest_failure.json", failure)
+            print(json.dumps({"run_dir": str(run_dir), **failure}, ensure_ascii=False))
+            return 2
 
     adapter_registry = _resolve_repo_path(config.get("adapter_bank", {}).get("registry_path", "configs/3090_adapter_cards.yaml"))
     adapter_cards = load_adapter_cards(adapter_registry)
@@ -636,6 +840,8 @@ def main() -> int:
         "git_commit": _git_commit(),
         "config_path": str(config_path.relative_to(REPO_ROOT)),
         "dry_run": dry_run,
+        "data": config.get("data", {}),
+        "manifest_sample_count": len(manifest_samples),
         "hardware": config.get("hardware", {}),
         "model": config.get("model", {}),
         "adapter_registry_path": str(adapter_registry.relative_to(REPO_ROOT)),
@@ -647,10 +853,11 @@ def main() -> int:
     write_json(run_dir / "run_manifest.json", manifest)
 
     traces: list[dict[str, Any]] = []
-    real_measurement_cache: dict[tuple[str, int], RealVisualMeasurement] = {}
+    real_measurement_cache: dict[tuple[str, int, str], RealVisualMeasurement] = {}
     max_samples = int(config.get("run", {}).get("max_samples", 20))
     for cell in load_matrix_cells(config):
         for sample_index in range(max_samples):
+            task_sample = sample_for_index(manifest_samples, sample_index)
             trace = _trace_for_cell(
                 run_id=run_id,
                 sample_index=sample_index,
@@ -661,6 +868,7 @@ def main() -> int:
                 multi_specialist_estimate_mb=multi_specialist_estimate_mb,
                 real_probe=real_probe,
                 real_measurement_cache=real_measurement_cache,
+                task_sample=task_sample,
                 max_new_tokens=args.max_new_tokens,
             )
             trace["route_trace_path"] = str(trace_path.relative_to(REPO_ROOT))
@@ -676,6 +884,7 @@ def main() -> int:
         normal_path_budget_mb=float(config.get("hardware", {}).get("normal_path_budget_mb", 22000)),
         dry_run=dry_run,
         allow_promotion=False,
+        data_mode=_data_mode(config),
     )
     write_json(run_dir / "checks.json", gates)
 

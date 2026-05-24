@@ -4,6 +4,10 @@ from dataclasses import asdict, dataclass
 from typing import Any, Mapping
 
 
+DEFAULT_KV_CACHE_MB_PER_TOKEN = 0.2977
+DECODE_INCREMENTAL_PEAK_PROXY_SOURCE = "generate_minus_prefill_proxy_not_true_decode_only"
+
+
 def _float_or_none(value: Any) -> float | None:
     if value is None or value == "":
         return None
@@ -41,11 +45,13 @@ class PeakMemoryBreakdown:
     active_adapter_resident_mb: float
     visual_incremental_peak_mb: float
     decode_incremental_peak_mb: float
+    generate_extra_peak_over_prefill_mb: float
     total_peak_mb: float
     normal_path_peak_mb: float
     controlled_fallback_peak_mb: float | None
     emergency_fallback_peak_mb: float | None
     measurement_source: str
+    decode_incremental_peak_source: str
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -106,17 +112,24 @@ def record_peak_memory(
     active_adapter_resident_mb: float = 0.0,
     visual_incremental_peak_mb: float = 0.0,
     decode_incremental_peak_mb: float = 0.0,
+    generate_extra_peak_over_prefill_mb: float | None = None,
     controlled_fallback_extra_mb: float | None = None,
     emergency_fallback_extra_mb: float | None = None,
     measurement_source: str = "dry_run_config_estimate",
+    decode_incremental_peak_source: str = DECODE_INCREMENTAL_PEAK_PROXY_SOURCE,
 ) -> PeakMemoryBreakdown:
     """Build the separated memory accounting required by the 3090 contract."""
 
+    generate_extra = (
+        float(generate_extra_peak_over_prefill_mb)
+        if generate_extra_peak_over_prefill_mb is not None
+        else float(decode_incremental_peak_mb or 0.0)
+    )
     normal = (
         after_load.allocated_mb
         + float(adapter_bank_resident_mb or 0.0)
         + float(visual_incremental_peak_mb or 0.0)
-        + float(decode_incremental_peak_mb or 0.0)
+        + generate_extra
     )
     controlled = None
     if controlled_fallback_extra_mb is not None:
@@ -131,19 +144,21 @@ def record_peak_memory(
         adapter_bank_resident_mb=_round(adapter_bank_resident_mb) or 0.0,
         active_adapter_resident_mb=_round(active_adapter_resident_mb) or 0.0,
         visual_incremental_peak_mb=_round(visual_incremental_peak_mb) or 0.0,
-        decode_incremental_peak_mb=_round(decode_incremental_peak_mb) or 0.0,
+        decode_incremental_peak_mb=_round(generate_extra) or 0.0,
+        generate_extra_peak_over_prefill_mb=_round(generate_extra) or 0.0,
         total_peak_mb=_round(normal) or 0.0,
         normal_path_peak_mb=_round(normal) or 0.0,
         controlled_fallback_peak_mb=_round(controlled),
         emergency_fallback_peak_mb=_round(emergency),
         measurement_source=measurement_source,
+        decode_incremental_peak_source=decode_incremental_peak_source,
     )
 
 
 def estimate_kv_cache_mb(
     visual_token_count: int | float | None,
     *,
-    mb_per_token: float = 0.2977,
+    mb_per_token: float = DEFAULT_KV_CACHE_MB_PER_TOKEN,
 ) -> float | None:
     tokens = _float_or_none(visual_token_count)
     if tokens is None:
@@ -179,6 +194,7 @@ def require_memory_contract(trace: Mapping[str, Any]) -> list[str]:
         "active_adapter_resident_mb",
         "visual_incremental_peak_mb",
         "decode_incremental_peak_mb",
+        "generate_extra_peak_over_prefill_mb",
         "total_peak_mb",
         "normal_path_peak_mb",
         "controlled_fallback_peak_mb",

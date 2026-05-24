@@ -179,6 +179,7 @@ def build_gate_report(
     normal_path_budget_mb: float,
     dry_run: bool,
     allow_promotion: bool = False,
+    data_mode: str = "synthetic_probe",
 ) -> dict[str, Any]:
     cell_ids = {trace.get("matrix_cell") for trace in traces}
     c4 = next((row for row in summary_rows if row.get("matrix_cell") == "C4"), {})
@@ -195,13 +196,56 @@ def build_gate_report(
     c4_reduces_visual = (c4.get("visual_token_count_mean") or float("inf")) < (
         c3.get("visual_token_count_mean") or 0.0
     )
+    has_actual_task_score = all(
+        bool(trace.get("quality", {}).get("actual_task_score_available"))
+        for trace in traces
+    )
+    has_actual_adapter = any(
+        trace.get("source", {}).get("adapter_execution_mode") in {"actual_peft", "merged_lora"}
+        for trace in traces
+    )
+    has_measured_specialist_baseline = any(
+        bool(trace.get("model_residency", {}).get("measured_sequential_swap_available"))
+        or bool(trace.get("model_residency", {}).get("measured_joint_residency_available"))
+        for trace in traces
+    )
+    non_synthetic_data = data_mode in {"stage1_smoke_manifest", "real_task_manifest"}
+    real_task_data = data_mode == "real_task_manifest"
 
-    promotion_gate = bool(c4_under_budget and c4_reduces_visual and not dry_run and allow_promotion)
+    resident_track_promotion_gate = bool(
+        not dry_run
+        and has_actual_adapter
+        and has_measured_specialist_baseline
+        and allow_promotion
+    )
+    foveation_track_promotion_gate = bool(
+        not dry_run
+        and real_task_data
+        and has_actual_task_score
+        and c4_reduces_visual
+        and allow_promotion
+    )
+    combined_track_promotion_gate = bool(
+        resident_track_promotion_gate
+        and foveation_track_promotion_gate
+        and c4_under_budget
+        and allow_promotion
+    )
+
+    promotion_gate = combined_track_promotion_gate
     notes = []
     if dry_run:
         notes.append("Dry-run/proxy-only result. Do not claim final performance.")
     if not allow_promotion:
         notes.append("Promotion is disabled until trained LoRA and stronger evidence justify it.")
+    if not non_synthetic_data:
+        notes.append("Synthetic probe data can support memory smoke, not real task validation.")
+    if not has_actual_adapter:
+        notes.append("Adapter path is proxy accounting until actual PEFT or merged LoRA weights are evaluated.")
+    if not has_measured_specialist_baseline:
+        notes.append("Multi-specialist baseline is an estimate until sequential or joint residency is measured.")
+    if not has_actual_task_score:
+        notes.append("Quality score is synthetic proxy; do not use as task accuracy.")
     if not c4_under_budget:
         notes.append("C4 normal path did not clear the configured normal-path budget.")
     if not c4_reduces_visual:
@@ -216,6 +260,15 @@ def build_gate_report(
             "required_cells_present": sorted(cell_ids),
             "c4_under_normal_path_budget": c4_under_budget,
             "c4_visual_tokens_less_than_c3": c4_reduces_visual,
+            "has_actual_adapter_execution": has_actual_adapter,
+            "has_actual_task_score": has_actual_task_score,
+            "has_measured_specialist_baseline": has_measured_specialist_baseline,
+            "data_mode": data_mode,
             "normal_path_budget_mb": normal_path_budget_mb,
+        },
+        "track_promotion_gates": {
+            "resident_track_promotion_gate": resident_track_promotion_gate,
+            "foveation_track_promotion_gate": foveation_track_promotion_gate,
+            "combined_track_promotion_gate": combined_track_promotion_gate,
         },
     }

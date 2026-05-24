@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from vfa_policy.core.memory_accounting import estimate_kv_cache_mb
+from vfa_policy.core.memory_accounting import DEFAULT_KV_CACHE_MB_PER_TOKEN, estimate_kv_cache_mb
 
 
 VISUAL_ESTIMATES = {
@@ -81,4 +81,8 @@ def visual_estimate(visual_policy: str, *, full_reference_tokens: int = 609) -> 
     else:
         estimate["visual_token_reduction_vs_full"] = None
     estimate["kv_cache_estimate_mb"] = estimate_kv_cache_mb(estimate.get("visual_token_count"))
+    estimate["kv_cache_estimate_source"] = "heuristic_mb_per_visual_token"
+    estimate["kv_cache_mb_per_token"] = DEFAULT_KV_CACHE_MB_PER_TOKEN
+    estimate["kv_cache_calibrated"] = False
+    estimate["visual_token_count_source"] = "dry_run_visual_estimate"
     return estimate

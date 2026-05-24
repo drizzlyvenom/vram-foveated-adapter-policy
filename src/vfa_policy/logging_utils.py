@@ -9,9 +9,16 @@ from typing import Any, Iterable
 
 
 def ensure_run_dir(run_id: str, output_dir: str | Path = "runs") -> Path:
-    run_dir = (Path(output_dir) / run_id).resolve()
-    run_dir.mkdir(parents=True, exist_ok=False)
-    return run_dir
+    base_dir = Path(output_dir)
+    run_dir = (base_dir / run_id).resolve()
+    for suffix in range(100):
+        candidate = run_dir if suffix == 0 else (base_dir / f"{run_id}-{suffix}").resolve()
+        try:
+            candidate.mkdir(parents=True, exist_ok=False)
+            return candidate
+        except FileExistsError:
+            continue
+    raise FileExistsError(f"Could not allocate a unique run directory for {run_id!r}.")
 
 
 def write_json(path: str | Path, obj: dict[str, Any]) -> None:

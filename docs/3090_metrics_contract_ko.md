@@ -15,6 +15,8 @@ memory:
   active_adapter_resident_mb: null
   visual_incremental_peak_mb: null
   decode_incremental_peak_mb: null
+  generate_extra_peak_over_prefill_mb: null
+  decode_incremental_peak_source: generate_minus_prefill_proxy_not_true_decode_only
   total_peak_mb: null
   normal_path_peak_mb: null
   controlled_fallback_peak_mb: null
@@ -45,6 +47,9 @@ visual:
   roi_miss_rate: null
   wrong_crop_distraction: null
   kv_cache_estimate_mb: null
+  kv_cache_estimate_source: heuristic_mb_per_visual_token | calibrated_model_formula
+  kv_cache_mb_per_token: null
+  kv_cache_calibrated: false
   prefill_latency_ms: null
 ```
 
@@ -77,6 +82,8 @@ quality:
   verifier_pass: null
   confidence: null
   confidence_source: proxy_score_no_ground_truth | answer_match_proxy | model_logit | external_verifier | none
+  task_score_source: synthetic_proxy | benchmark_label | human_eval | external_verifier
+  actual_task_score_available: false
 ```
 
 ## 6. Routing and compatibility metrics
@@ -129,7 +136,26 @@ failure_types:
 
 `terminal_model_error`, `no_fallback_available`, and `unresolved` should usually produce `reject`, not `quarantine`.
 
-## 9. Summary CSV required columns
+## 9. Source semantics
+
+각 trace는 어떤 값이 실측이고, 어떤 값이 proxy 또는 estimate인지 반드시 분리한다.
+
+```yaml
+source:
+  memory_source: qwen3_vl_4b_local_cuda_prefill_generate | dry_run_config_estimate
+  visual_token_source: qwen3_vl_image_grid_thw | dry_run_visual_estimate
+  quality_source: synthetic_proxy | real_task_score
+  adapter_memory_source: adapter_card_estimate | measured_adapter_residency
+  adapter_execution_mode: shared_backbone_only | proxy_card_accounting | actual_peft | merged_lora
+  roi_source: synthetic_probe | center_crop | oracle_box | OCR_box | foveater_model
+  data_mode: synthetic_probe | stage1_smoke_manifest | real_task_manifest
+  task_validation_level: smoke_or_proxy | real_task_validation
+```
+
+`decode_incremental_peak_mb`는 호환성을 위해 유지하지만, 현재 구현에서는 순수 decode-only가 아니다.
+실제 의미상 `generate_extra_peak_over_prefill_mb`를 우선 읽는다.
+
+## 10. Summary CSV required columns
 
 ```text
 run_id

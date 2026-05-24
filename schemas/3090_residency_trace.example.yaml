@@ -1,6 +1,7 @@
 schema_version: "3090.residency_trace.v0.1"
 run_id: "20260524T000000Z-3090_two_track_pilot"
 sample_id: "sample_0001"
+data_mode: "synthetic_probe"
 matrix_cell: "C4"
 
 model_residency:
@@ -15,6 +16,10 @@ model_residency:
   model_load_latency_ms: null
   model_swap_latency_ms: null
   lora_switch_latency_ms: 4.2
+  adapter_execution_mode: "proxy_card_accounting"
+  resident_estimate_method: "same_backbone_after_load_times_count"
+  measured_sequential_swap_available: false
+  measured_joint_residency_available: false
 
 visual_evidence:
   policy: "foveater_roi"
@@ -27,6 +32,9 @@ visual_evidence:
   full_image_visual_token_count_reference: 609
   visual_token_reduction_vs_full: 0.294
   kv_cache_estimate_mb: 128.0
+  kv_cache_estimate_source: "heuristic_mb_per_visual_token"
+  kv_cache_mb_per_token: 0.2977
+  kv_cache_calibrated: false
   prefill_latency_ms: 210.0
   roi_recall_at_1: 1.0
   wrong_crop_distraction: false
@@ -38,6 +46,8 @@ memory:
   active_adapter_resident_mb: 18.0
   visual_incremental_peak_mb: 310.0
   decode_incremental_peak_mb: 160.0
+  generate_extra_peak_over_prefill_mb: 160.0
+  decode_incremental_peak_source: "generate_minus_prefill_proxy_not_true_decode_only"
   total_peak_mb: 8960.9
   normal_path_peak_mb: 8960.9
   controlled_fallback_peak_mb: null
@@ -46,11 +56,25 @@ memory:
 
 quality:
   task_score: 0.84
+  proxy_task_score: 0.84
+  task_score_source: "synthetic_proxy"
+  actual_task_score_available: false
   answer_correct: true
   verifier_score: 0.84
   verifier_pass: true
   confidence: 0.84
   confidence_source: "proxy_score_no_ground_truth"
+
+source:
+  memory_source: "qwen3_vl_4b_local_cuda_prefill_generate"
+  visual_token_source: "qwen3_vl_image_grid_thw"
+  quality_source: "synthetic_proxy"
+  adapter_memory_source: "adapter_card_estimate"
+  adapter_execution_mode: "proxy_card_accounting"
+  roi_source: "synthetic_probe"
+  data_mode: "synthetic_probe"
+  specialist_baseline_source: "same_backbone_after_load_times_count"
+  task_validation_level: "smoke_or_proxy"
 
 routing:
   router_type: "taxonomy_card"

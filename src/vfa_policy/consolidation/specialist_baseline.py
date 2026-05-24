@@ -22,11 +22,25 @@ def estimate_specialist_baseline(
     default_model_swap_latency_ms: float = 4000.0,
 ) -> dict[str, Any]:
     count = specialist_count(config)
+    baseline_config = (
+        config.get("model_residency_axis", {})
+        .get("M1_multi_specialist_baseline", {})
+    )
     estimate = estimate_multi_specialist_residency(shared_backbone_after_load_mb, count)
     return {
         "specialist_model_count": count,
         "per_model_after_load_allocated_mb": shared_backbone_after_load_mb,
         "multi_specialist_resident_estimate_mb": estimate,
+        "resident_estimate_method": baseline_config.get(
+            "resident_estimate_method",
+            "same_backbone_after_load_times_count",
+        ),
+        "measured_sequential_swap_available": bool(
+            baseline_config.get("measured_sequential_swap_available", False)
+        ),
+        "measured_joint_residency_available": bool(
+            baseline_config.get("measured_joint_residency_available", False)
+        ),
         "fits_in_24gb": bool(estimate is not None and estimate <= config.get("hardware", {}).get("vram_budget_mb", 24576)),
         "model_load_latency_ms": default_model_swap_latency_ms,
         "model_swap_latency_ms": default_model_swap_latency_ms,

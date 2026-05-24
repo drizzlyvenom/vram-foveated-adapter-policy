@@ -5,7 +5,11 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
-from vfa_policy.core.memory_accounting import estimate_kv_cache_mb
+from vfa_policy.core.memory_accounting import (
+    DECODE_INCREMENTAL_PEAK_PROXY_SOURCE,
+    DEFAULT_KV_CACHE_MB_PER_TOKEN,
+    estimate_kv_cache_mb,
+)
 from vfa_policy.foveation.roi_metrics import visual_estimate
 
 
@@ -157,7 +161,8 @@ class Qwen3VLRealProbe:
         self.device = "cuda:0"
         self.max_new_tokens = int(max_new_tokens)
         self.measurement_source = "qwen3_vl_4b_local_cuda_prefill_generate"
-        self.image_bank = make_probe_images(run_dir)
+        self.run_dir = Path(run_dir)
+        self.image_bank = make_probe_images(self.run_dir)
 
         model_path = Path(model_path)
         dtype = _dtype_from_name(torch, dtype_name)
@@ -220,9 +225,14 @@ class Qwen3VLRealProbe:
         visual_policy: str,
         prompt: str,
         max_new_tokens: int | None = None,
+        image_paths_override: list[str | Path] | None = None,
     ) -> RealVisualMeasurement:
         torch = self.torch
-        image_paths = image_paths_for_policy(visual_policy, self.image_bank)
+        image_paths = (
+            [Path(path) for path in image_paths_override]
+            if image_paths_override is not None
+            else image_paths_for_policy(visual_policy, self.image_bank)
+        )
         cpu_inputs, per_image_tokens = self._prepare_inputs(image_paths, prompt)
         split_counts = _split_visual_counts(visual_policy, per_image_tokens)
         estimate = visual_estimate(visual_policy)
@@ -262,7 +272,10 @@ class Qwen3VLRealProbe:
         generation_latency_ms = round((time.perf_counter() - started) * 1000.0, 3)
         generate_peak_abs_mb = _cuda_peak_allocated_mb(torch)
         generate_incremental_peak_mb = round(max(0.0, generate_peak_abs_mb - generate_baseline), 3)
-        decode_incremental_peak_mb = round(max(0.0, generate_incremental_peak_mb - visual_incremental_peak_mb), 3)
+        generate_extra_peak_over_prefill_mb = round(
+            max(0.0, generate_incremental_peak_mb - visual_incremental_peak_mb),
+            3,
+        )
         answer_text = self.processor.batch_decode(generated, skip_special_tokens=True)[0]
         del generated
         del cuda_generate_inputs
@@ -276,6 +289,9 @@ class Qwen3VLRealProbe:
         visual["per_image_visual_tokens"] = per_image_tokens
         visual["visual_token_count_source"] = "qwen3_vl_image_grid_thw"
         visual["kv_cache_estimate_mb"] = estimate_kv_cache_mb(visual.get("visual_token_count"))
+        visual["kv_cache_estimate_source"] = "heuristic_mb_per_visual_token"
+        visual["kv_cache_mb_per_token"] = DEFAULT_KV_CACHE_MB_PER_TOKEN
+        visual["kv_cache_calibrated"] = False
         visual["prefill_latency_ms"] = prefill_latency_ms
         visual["generation_latency_ms"] = generation_latency_ms
         visual["prefill_peak_abs_mb"] = prefill_peak_abs_mb
@@ -287,13 +303,15 @@ class Qwen3VLRealProbe:
 
         memory = {
             "visual_incremental_peak_mb": visual_incremental_peak_mb,
-            "decode_incremental_peak_mb": decode_incremental_peak_mb,
+            "decode_incremental_peak_mb": generate_extra_peak_over_prefill_mb,
+            "generate_extra_peak_over_prefill_mb": generate_extra_peak_over_prefill_mb,
             "generate_incremental_peak_mb": generate_incremental_peak_mb,
             "prefill_baseline_allocated_mb": round(prefill_baseline, 3),
             "generate_baseline_allocated_mb": round(generate_baseline, 3),
             "prefill_peak_abs_mb": prefill_peak_abs_mb,
             "generate_peak_abs_mb": generate_peak_abs_mb,
             "measurement_source": self.measurement_source,
+            "decode_incremental_peak_source": DECODE_INCREMENTAL_PEAK_PROXY_SOURCE,
         }
         timing = {
             "prefill_latency_ms": prefill_latency_ms,

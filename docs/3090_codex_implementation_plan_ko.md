@@ -38,6 +38,7 @@ completed:
   - real CUDA mode loads the local Qwen3-VL-4B snapshot on RTX 3090
   - real CUDA mode records base-after-load allocated/reserved memory
   - real CUDA mode records visual/decode incremental peaks for full image, foveated ROI, and oracle ROI paths
+  - real-task manifest mode prepares local full/low-res/ROI image evidence
   - runner emits Korean result summary and short-paper draft per run
 ```
 
@@ -51,6 +52,8 @@ schemas/3090_combined_validation_result.example.yaml
 src/vfa_policy/core/memory_accounting.py
 src/vfa_policy/core/real_measurement.py
 src/vfa_policy/core/validation_matrix.py
+src/vfa_policy/foveation/real_task_manifest.py
+scripts/prepare_real_task_manifest.py
 scripts/run_3090_two_track_validation.py
 ```
 
@@ -66,13 +69,20 @@ Real CUDA smoke command:
 .venv\Scripts\python.exe scripts\run_3090_two_track_validation.py --config configs\3090_two_track_pilot.yaml --real-run --max-samples 4 --max-new-tokens 4
 ```
 
+Real-task image smoke command:
+
+```powershell
+python scripts\prepare_real_task_manifest.py --source picsum_highres --max-samples 4
+.venv\Scripts\python.exe scripts\run_3090_two_track_validation.py --config configs\3090_two_track_pilot.yaml --real-run --data-mode real_task_manifest --manifest data\real_task_smoke\manifest.jsonl --max-samples 2 --max-new-tokens 4
+```
+
 ## 3. 다음 구현 pass
 
-R0 smoke 다음에는 측정 반복성과 실제 adapter weight 평가를 점진적으로 붙인다.
+R0/R3 real-task image smoke 다음에는 ROI source와 실제 adapter weight 평가를 점진적으로 붙인다.
 
 ```yaml
 next_pass_order:
-  - repeat R0/R3 on real task images and dataset subsets
+  - replace center_crop ROI with oracle_box, OCR_box, or foveater_model
   - add real trained LoRA weights when available
   - measure adapter isolation and wrong-adapter damage with real adapters
   - replace LoRA switch latency proxy with measured switch timing when adapters are available
