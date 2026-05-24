@@ -24,6 +24,7 @@ Track B. FoveateR-style visual evidence compression
 - 3090 execution ladder: `docs/3090_execution_ladder_ko.md`
 - 3090 metrics contract: `docs/3090_metrics_contract_ko.md`
 - 3090 decision gates: `docs/3090_decision_gates_ko.md`
+- local artifact boundary: `docs/local_artifact_boundary_ko.md`
 - latest local run status: `docs/latest_run_status_ko.md`
 - result briefs: `docs/results/`
 - 3090 pilot config: `configs/3090_two_track_pilot.yaml`
@@ -66,7 +67,7 @@ python scripts\prepare_real_task_manifest.py --source picsum_highres --max-sampl
 .venv\Scripts\python.exe scripts\run_3090_two_track_validation.py --config configs\3090_two_track_pilot.yaml --real-run --data-mode real_task_manifest --manifest data\real_task_smoke\manifest.jsonl --max-samples 2 --max-new-tokens 4
 ```
 
-주요 산출물은 실행별 `runs/<run_id>/combined_validation_result.json`, `summary.csv`, `route_traces.jsonl`, `result_summary_ko.md`, `short_paper_ko.md`에 기록됩니다.
+주요 산출물은 실행별 `runs/<run_id>/combined_validation_result.json`, `summary.csv`, `route_traces.jsonl`, `result_summary_ko.md`, `short_paper_ko.md`에 기록됩니다. `runs/`, `data/`, `hf_cache/`는 로컬 전용이며 Git에는 result brief와 재현 명령만 남깁니다. 자세한 기준은 `docs/local_artifact_boundary_ko.md`를 봅니다.
 
 ## Claim Rule
 

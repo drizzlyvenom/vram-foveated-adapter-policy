@@ -1,6 +1,6 @@
 # Result Briefs
 
-이 폴더는 `runs/` 원본 산출물을 그대로 커밋하지 않고, 연구 판단과 외부 검토에 필요한 얇은 결과 브리핑만 남기는 공간이다.
+이 폴더는 `runs/` 원본 산출물을 그대로 커밋하지 않고, 연구 판단과 외부 검토에 필요한 얇은 결과 브리핑만 남기는 공간이다. Git에 남는 결과 브리프와 로컬 전용 raw artifact의 관계는 [local artifact boundary](../local_artifact_boundary_ko.md)에 정리한다.
 
 ## 원칙
 
