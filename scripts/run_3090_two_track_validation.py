@@ -44,6 +44,7 @@ from vfa_policy.foveation.real_task_manifest import (
     sample_for_index,
 )
 from vfa_policy.logging_utils import append_jsonl, ensure_run_dir, write_json, write_summary_csv
+from vfa_policy.paths import DEFAULT_ADAPTER_CARDS, DEFAULT_TWO_TRACK_CONFIG, resolve_repo_path
 
 
 TAXONOMY_SEQUENCE = ["document", "scene_text", "ui_screen", "chart"]
@@ -68,10 +69,7 @@ def _run_id(config: dict[str, Any]) -> str:
 
 
 def _resolve_repo_path(path_text: str) -> Path:
-    path = Path(path_text)
-    if path.is_absolute():
-        return path
-    return (REPO_ROOT / path).resolve()
+    return resolve_repo_path(path_text)
 
 
 def _quality_score(cell_id: str, sample_index: int, *, fallback_executed: bool, wrong_adapter: bool) -> float:
@@ -850,7 +848,7 @@ failure label은 wrong adapter damage, ROI miss, fallback tier, reject/quarantin
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config", default="configs/3090_two_track_pilot.yaml")
+    parser.add_argument("--config", default=DEFAULT_TWO_TRACK_CONFIG)
     parser.add_argument("--max-samples", type=int, default=None)
     parser.add_argument("--dry-run", action="store_true", help="Force dry-run mode even if config changes later.")
     parser.add_argument("--real-run", action="store_true", help="Load the local Qwen3-VL snapshot and record CUDA memory.")
@@ -913,7 +911,7 @@ def main() -> int:
             print(json.dumps({"run_dir": str(run_dir), **failure}, ensure_ascii=False))
             return 2
 
-    adapter_registry = _resolve_repo_path(config.get("adapter_bank", {}).get("registry_path", "configs/3090_adapter_cards.yaml"))
+    adapter_registry = _resolve_repo_path(config.get("adapter_bank", {}).get("registry_path", DEFAULT_ADAPTER_CARDS))
     adapter_cards = load_adapter_cards(adapter_registry)
     real_probe: Qwen3VLRealProbe | None = None
     real_probe_load: dict[str, Any] | None = None

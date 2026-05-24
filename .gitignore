@@ -1,7 +1,8 @@
 # Local editor/app state
 .obsidian/
 
-# Local scratch and staged deletion area
+# Local scratch, staged deletion area, and runtime artifacts
+.local/
 tmp/
 trashbin/
 local_workbench/
@@ -39,7 +40,7 @@ Legacy/output/paper/build_ko/
 output/experiment/3090_pilot_costsim/
 Legacy/output/experiment/3090_pilot_costsim/
 
-# Local experiment outputs and downloaded datasets
+# Backward-compatible ignores for pre-.local runtime paths
 runs/
 data/
 hf_cache/

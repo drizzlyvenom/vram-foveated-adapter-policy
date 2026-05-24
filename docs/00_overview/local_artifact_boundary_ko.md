@@ -1,6 +1,6 @@
 # Local Artifact Boundary
 
-이 문서는 이 저장소에서 **Git에 커밋되는 공개 산출물**과 **로컬 작업 디렉터리에만 남기는 실행 산출물**을 구분하기 위한 기준 문서다. 외부 검토나 리서치 핸드오프에서 `runs/`, `data/`, `hf_cache/`가 Git에 없다는 이유로 재현성 문제가 있다고 오해하지 않도록, 어떤 파일이 왜 커밋되지 않는지 명시한다.
+이 문서는 이 저장소에서 **Git에 커밋되는 공개 산출물**과 **로컬 작업 디렉터리에만 남기는 실행 산출물**을 구분하기 위한 기준 문서다. 외부 검토나 리서치 핸드오프에서 `.local/runs/`, `.local/data/`, `.local/hf_cache/`가 Git에 없다는 이유로 재현성 문제가 있다고 오해하지 않도록, 어떤 파일이 왜 커밋되지 않는지 명시한다.
 
 ## 1. 커밋되는 산출물
 
@@ -11,11 +11,11 @@ committed:
   docs:
     role: "protocol, claim boundary, result brief, latest status"
     examples:
-      - "docs/3090_two_track_validation_guideline_ko.md"
-      - "docs/3090_execution_ladder_ko.md"
-      - "docs/3090_metrics_contract_ko.md"
-      - "docs/latest_run_status_ko.md"
-      - "docs/results/"
+      - "docs/00_overview/3090_two_track_validation_guideline_ko.md"
+      - "docs/10_protocols/3090_execution_ladder_ko.md"
+      - "docs/10_protocols/3090_metrics_contract_ko.md"
+      - "docs/00_overview/latest_run_status_ko.md"
+      - "docs/20_results/"
   configs:
     role: "active validation config and adapter cards"
   schemas:
@@ -47,7 +47,7 @@ result_brief_contains:
 
 ```yaml
 local_only:
-  runs/:
+  .local/runs/:
     contains:
       - "combined_validation_result.json"
       - "summary.csv"
@@ -57,13 +57,13 @@ local_only:
       - "probe images"
     reason: "실행마다 커지고, raw trace와 이미지가 포함되며, Git diff 검토에 적합하지 않음"
 
-  data/:
+  .local/data/:
     contains:
       - "downloaded image/task samples"
       - "real_task_smoke/manifest.jsonl"
     reason: "재현 명령으로 다시 생성 가능한 입력 데이터이며, 외부 데이터셋/이미지 라이선스와 용량 이슈가 있음"
 
-  hf_cache/:
+  .local/hf_cache/:
     contains:
       - "local Hugging Face model snapshots"
     reason: "대용량 모델 캐시이며, GitHub에 올릴 대상이 아님"
@@ -71,14 +71,14 @@ local_only:
   .venv/:
     reason: "개인 로컬 Python 환경"
 
-  local_workbench/:
+  .local/workbench/:
     reason: "Codex handoff notes, 개인 작업 메모, 임시 지시문"
 
-  trashbin/:
+  .local/trashbin/:
     reason: "검토 전 임시 보관소"
 ```
 
-따라서 `docs/results/*.md`의 run id가 `runs/<run_id>/`를 가리키더라도, 그 원본 폴더가 GitHub에 없다는 것은 의도된 상태다.
+따라서 `docs/20_results/*.md`의 run id가 `.local/runs/<run_id>/`를 가리키더라도, 그 원본 폴더가 GitHub에 없다는 것은 의도된 상태다.
 
 ## 3. 재현 방식
 
@@ -86,18 +86,18 @@ local_only:
 
 ```powershell
 python scripts\prepare_real_task_manifest.py --source picsum_highres --max-samples 4
-.venv\Scripts\python.exe scripts\run_3090_two_track_validation.py --config configs\3090_two_track_pilot.yaml --real-run --data-mode real_task_manifest --manifest data\real_task_smoke\manifest.jsonl --max-samples 2 --max-new-tokens 4
+.venv\Scripts\python.exe scripts\run_3090_two_track_validation.py --config configs\3090\two_track_pilot.yaml --real-run --data-mode real_task_manifest --manifest .local\data\real_task_smoke\manifest.jsonl --max-samples 2 --max-new-tokens 4
 ```
 
 이 명령은 다음을 다시 생성한다.
 
 ```yaml
 regenerated_local_artifacts:
-  - "data/real_task_smoke/manifest.jsonl"
-  - "data/real_task_smoke/images/"
-  - "runs/<new_run_id>/combined_validation_result.json"
-  - "runs/<new_run_id>/summary.csv"
-  - "runs/<new_run_id>/route_traces.jsonl"
+  - ".local/data/real_task_smoke/manifest.jsonl"
+  - ".local/data/real_task_smoke/images/"
+  - ".local/runs/<new_run_id>/combined_validation_result.json"
+  - ".local/runs/<new_run_id>/summary.csv"
+  - ".local/runs/<new_run_id>/route_traces.jsonl"
 ```
 
 단, 정확히 같은 CUDA peak 수치는 드라이버, PyTorch, 캐시 상태, GPU 부하에 따라 약간 달라질 수 있다. 재현성 판단은 동일한 matrix cell, source semantics, gate status, metric directionality가 유지되는지를 함께 본다.
@@ -132,9 +132,9 @@ cleanup_policy:
     - "schemas/"
     - "scripts/"
     - "src/"
-    - "data/"
-    - "runs/"
-    - "hf_cache/"
+    - ".local/data/"
+    - ".local/runs/"
+    - ".local/hf_cache/"
   move_to_local_workbench:
     - "Codex goal/readme handoff notes"
     - "private planning prompts"
@@ -145,4 +145,4 @@ cleanup_policy:
     - "historical docs/configs/scripts that may still be useful as reference"
 ```
 
-`data/`, `runs/`, `hf_cache/`는 보기에는 무겁지만 현재 검증 명령이 직접 참조하는 활성 로컬 작업면이다. 실험 경로가 안정화되기 전에는 루트에서 무리하게 이동하지 않는다.
+`.local/data/`, `.local/runs/`, `.local/hf_cache/`는 보기에는 무겁지만 현재 검증 명령이 직접 참조하는 활성 로컬 작업면이다. 루트에는 공개 작업면을 남기고, 로컬 실행 산출물은 `.local/` 아래에 모은다.

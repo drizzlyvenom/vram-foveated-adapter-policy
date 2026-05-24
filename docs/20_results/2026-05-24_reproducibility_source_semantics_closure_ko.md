@@ -4,7 +4,7 @@
 
 `ba2029a` 기준 main 작업면에서 real-task image smoke 재현 명령을 다시 실행했고, RTX 3090 real CUDA run이 정상 완료되었다. 이번 closure의 목적은 새 성능 claim을 추가하는 것이 아니라, **현재 repo의 공개 파일만으로 같은 검증 경로를 재실행할 수 있음**과 **trace/result가 실제 측정값과 proxy/estimate 값을 더 명확히 분리해 기록함**을 확인하는 것이다.
 
-원본 산출물은 로컬 `runs/20260524T072015Z-3090_two_track_pilot/` 아래에만 보관한다. Git에는 본 요약과 재현 명령, 핵심 source semantics만 남긴다.
+원본 산출물은 로컬 `.local/runs/20260524T072015Z-3090_two_track_pilot/` 아래에만 보관한다. Git에는 본 요약과 재현 명령, 핵심 source semantics만 남긴다.
 
 ## 실행 정보
 
@@ -27,7 +27,7 @@ raw_artifacts_committed: false
 
 ```powershell
 python scripts\prepare_real_task_manifest.py --source picsum_highres --max-samples 4
-.venv\Scripts\python.exe scripts\run_3090_two_track_validation.py --config configs\3090_two_track_pilot.yaml --real-run --data-mode real_task_manifest --manifest data\real_task_smoke\manifest.jsonl --max-samples 2 --max-new-tokens 4
+.venv\Scripts\python.exe scripts\run_3090_two_track_validation.py --config configs\3090\two_track_pilot.yaml --real-run --data-mode real_task_manifest --manifest .local\data\real_task_smoke\manifest.jsonl --max-samples 2 --max-new-tokens 4
 ```
 
 ## 핵심 결과
@@ -71,7 +71,7 @@ C4 trace 예시는 다음을 기록한다.
 ```yaml
 sample_id: "picsum_highres_1"
 image_source: "manifest.full_image_path"
-manifest_full_image_path: "data/real_task_smoke/images/picsum_highres_1.jpg"
+manifest_full_image_path: ".local/data/real_task_smoke/images/picsum_highres_1.jpg"
 selected_image_paths:
   - role: "low_res_global"
   - role: "roi_crop"

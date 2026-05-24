@@ -7,6 +7,11 @@ from pathlib import Path
 from urllib.request import urlopen
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+SRC_ROOT = REPO_ROOT / "src"
+if str(SRC_ROOT) not in sys.path:
+    sys.path.insert(0, str(SRC_ROOT))
+
+from vfa_policy.paths import DEFAULT_REAL_TASK_DIR
 
 
 COCO_SAMPLES = [
@@ -106,7 +111,7 @@ def _download(url: str, destination: Path) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--output-dir", default="data/real_task_smoke")
+    parser.add_argument("--output-dir", default=DEFAULT_REAL_TASK_DIR)
     parser.add_argument("--source", choices=sorted(SAMPLE_SETS), default="picsum_highres")
     parser.add_argument("--max-samples", type=int, default=None)
     args = parser.parse_args()

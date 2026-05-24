@@ -77,18 +77,18 @@ source:
   image_source: "manifest.full_image_path"
   actual_image_execution: true
   manifest_sample_id: "picsum_highres_1"
-  manifest_full_image_path: "data/real_task_smoke/images/picsum_highres_1.jpg"
+  manifest_full_image_path: ".local/data/real_task_smoke/images/picsum_highres_1.jpg"
   source_dataset: "Lorem Picsum high-resolution real image smoke"
   source_url: "https://picsum.photos/seed/vfa_real_1/1600/1200"
   original_image_size_wh: [1600, 1200]
-  prepared_full_image_path: "runs/<run_id>/real_task_images/picsum_highres_1/full_1024.jpg"
-  prepared_low_res_path: "runs/<run_id>/real_task_images/picsum_highres_1/low_336.jpg"
-  prepared_roi_path: "runs/<run_id>/real_task_images/picsum_highres_1/roi_448.jpg"
+  prepared_full_image_path: ".local/runs/<run_id>/real_task_images/picsum_highres_1/full_1024.jpg"
+  prepared_low_res_path: ".local/runs/<run_id>/real_task_images/picsum_highres_1/low_336.jpg"
+  prepared_roi_path: ".local/runs/<run_id>/real_task_images/picsum_highres_1/roi_448.jpg"
   selected_image_paths:
     - role: "low_res_global"
-      path: "runs/<run_id>/real_task_images/picsum_highres_1/low_336.jpg"
+      path: ".local/runs/<run_id>/real_task_images/picsum_highres_1/low_336.jpg"
     - role: "roi_crop"
-      path: "runs/<run_id>/real_task_images/picsum_highres_1/roi_448.jpg"
+      path: ".local/runs/<run_id>/real_task_images/picsum_highres_1/roi_448.jpg"
   roi_box_rel_xyxy: [0.18, 0.16, 0.82, 0.84]
   roi_box_xyxy: [288, 192, 1312, 1008]
   evidence_preparation: "manifest_image_resize_lowres_and_roi_crop"

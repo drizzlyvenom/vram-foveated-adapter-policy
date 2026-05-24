@@ -1,6 +1,6 @@
 run:
   name: "3090_two_track_pilot"
-  output_dir: "runs"
+  output_dir: ".local/runs"
   seed: 42
   dry_run: true
   max_samples: 20
@@ -13,7 +13,7 @@ hardware:
 model:
   shared_backbone_id: "Qwen/Qwen3-VL-4B-Instruct"
   dtype: "float16"
-  local_snapshot_path: "hf_cache/hub/models--Qwen--Qwen3-VL-4B-Instruct/snapshots/ebb281ec70b05090aa6165b016eac8ec08e71b17"
+  local_snapshot_path: ".local/hf_cache/hub/models--Qwen--Qwen3-VL-4B-Instruct/snapshots/ebb281ec70b05090aa6165b016eac8ec08e71b17"
 
 data:
   mode: "synthetic_probe"
@@ -96,7 +96,7 @@ memory_accounting:
   estimate_kv_cache_mb: true
 
 adapter_bank:
-  registry_path: "configs/3090_adapter_cards.yaml"
+  registry_path: "configs/3090/adapter_cards.yaml"
   execution_mode: "proxy_card_accounting"
   active_adapters_per_request: 1
   routing_granularity: "request_or_roi_level"

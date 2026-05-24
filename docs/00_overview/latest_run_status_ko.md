@@ -17,7 +17,7 @@ committed:
   raw_run_artifacts_under_runs: false
 ```
 
-`runs/` 아래의 원본 실행 산출물은 로컬 검토용이며 git 추적 대상이 아니다. 공개 repo에는 재현 가능한 scaffold, schema, config, runner, claim boundary만 올린다. 커밋 산출물과 로컬 전용 산출물의 경계는 [local artifact boundary](local_artifact_boundary_ko.md)에 따로 정리한다.
+`.local/runs/` 아래의 원본 실행 산출물은 로컬 검토용이며 git 추적 대상이 아니다. 공개 repo에는 재현 가능한 scaffold, schema, config, runner, claim boundary만 올린다. 커밋 산출물과 로컬 전용 산출물의 경계는 [local artifact boundary](local_artifact_boundary_ko.md)에 따로 정리한다.
 
 ## 2. 로컬에서 확인된 실행 상태
 
@@ -32,13 +32,13 @@ trained_lora_evaluation_available: false
 measured_multi_specialist_swap_available: false
 
 local_only_reference_runs:
-  - runs/20260524T072015Z-3090_two_track_pilot
-  - runs/20260524T062952Z-3090_two_track_pilot
+  - .local/runs/20260524T072015Z-3090_two_track_pilot
+  - .local/runs/20260524T062952Z-3090_two_track_pilot
 ```
 
 최신 local-only run은 RTX 3090에서 Qwen3-VL-4B local snapshot을 실제 CUDA로 로드하고, `real_task_manifest`의 고해상도 실제 이미지에서 full/low-res/ROI visual path의 token, prefill, CUDA peak를 기록한 reproducibility/source-semantics closure다.
 
-Git에 남긴 최신 요약문은 [docs/results/2026-05-24_reproducibility_source_semantics_closure_ko.md](results/2026-05-24_reproducibility_source_semantics_closure_ko.md)이다.
+Git에 남긴 최신 요약문은 [docs/20_results/2026-05-24_reproducibility_source_semantics_closure_ko.md](../20_results/2026-05-24_reproducibility_source_semantics_closure_ko.md)이다.
 
 ```yaml
 latest_real_task_image_smoke:

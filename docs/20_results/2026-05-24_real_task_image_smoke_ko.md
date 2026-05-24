@@ -4,7 +4,7 @@
 
 RTX 3090 단일 장비에서 Qwen3-VL-4B local snapshot을 실제 CUDA로 로드하고, `real_task_manifest`의 고해상도 실제 이미지에 대해 full image, low-res, foveated ROI, oracle ROI, controlled fallback 경로를 같은 C-matrix로 측정했다.
 
-원본 산출물은 로컬 `runs/20260524T062952Z-3090_two_track_pilot/` 아래에만 보관한다. Git에는 본 요약만 남긴다.
+원본 산출물은 로컬 `.local/runs/20260524T062952Z-3090_two_track_pilot/` 아래에만 보관한다. Git에는 본 요약만 남긴다.
 
 ## 실행 정보
 
@@ -25,7 +25,7 @@ raw_artifacts_committed: false
 
 ```powershell
 python scripts\prepare_real_task_manifest.py --source picsum_highres --max-samples 4
-.venv\Scripts\python.exe scripts\run_3090_two_track_validation.py --config configs\3090_two_track_pilot.yaml --real-run --data-mode real_task_manifest --manifest data\real_task_smoke\manifest.jsonl --max-samples 2 --max-new-tokens 4
+.venv\Scripts\python.exe scripts\run_3090_two_track_validation.py --config configs\3090\two_track_pilot.yaml --real-run --data-mode real_task_manifest --manifest .local\data\real_task_smoke\manifest.jsonl --max-samples 2 --max-new-tokens 4
 ```
 
 ## 핵심 결과
