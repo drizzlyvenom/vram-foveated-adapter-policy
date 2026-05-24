@@ -1,7 +1,7 @@
 schema_version: "3090.route_trace.v0.2"
-run_id: "20260524T000000Z-3090_two_track_pilot"
-sample_id: "sample_0001"
-data_mode: "real_task_manifest"
+run_id: "20260524T000000Z-3090_tiny_scored_validation"
+sample_id: "doc_invoice_code_01"
+data_mode: "tiny_scored_manifest"
 matrix_cell: "C4"
 
 model_residency:
@@ -55,46 +55,55 @@ memory:
   measurement_source: "qwen3_vl_4b_local_cuda_prefill_generate"
 
 quality:
-  task_score: 0.84
-  proxy_task_score: 0.84
-  task_score_source: "synthetic_proxy"
-  actual_task_score_available: false
+  task_score: 1.0
+  proxy_task_score: 0.756
+  task_score_source: "normalized_answer_match"
+  actual_task_score_available: true
   answer_correct: true
-  verifier_score: 0.84
+  answer_type: "label"
+  expected_answer_count: 1
+  matched_expected_answer: "A17K"
+  verifier_score: 1.0
   verifier_pass: true
-  confidence: 0.84
-  confidence_source: "proxy_score_no_ground_truth"
+  confidence: 1.0
+  confidence_source: "answer_match"
 
 source:
   memory_source: "qwen3_vl_4b_local_cuda_prefill_generate"
   visual_token_source: "qwen3_vl_image_grid_thw"
-  quality_source: "synthetic_proxy"
-  task_score_source: "synthetic_proxy"
+  quality_source: "normalized_answer_match"
+  task_score_source: "normalized_answer_match"
   adapter_memory_source: "adapter_card_estimate"
   adapter_execution_mode: "proxy_card_accounting"
   roi_source: "center_crop"
-  data_mode: "real_task_manifest"
+  data_mode: "tiny_scored_manifest"
   image_source: "manifest.full_image_path"
   actual_image_execution: true
-  manifest_sample_id: "picsum_highres_1"
-  manifest_full_image_path: ".local/data/real_task_smoke/images/picsum_highres_1.jpg"
-  source_dataset: "Lorem Picsum high-resolution real image smoke"
-  source_url: "https://picsum.photos/seed/vfa_real_1/1600/1200"
+  manifest_sample_id: "doc_invoice_code_01"
+  manifest_full_image_path: ".local/data/tiny_scored_manifest/images/doc_invoice_code_01.jpg"
+  source_dataset: "VFA tiny scored controlled image set v0"
+  source_url: null
+  task_family: "document_or_receipt"
+  answer_type: "label"
   original_image_size_wh: [1600, 1200]
-  prepared_full_image_path: ".local/runs/<run_id>/real_task_images/picsum_highres_1/full_1024.jpg"
-  prepared_low_res_path: ".local/runs/<run_id>/real_task_images/picsum_highres_1/low_336.jpg"
-  prepared_roi_path: ".local/runs/<run_id>/real_task_images/picsum_highres_1/roi_448.jpg"
+  prepared_full_image_path: ".local/runs/<run_id>/real_task_images/doc_invoice_code_01/full_1024.jpg"
+  prepared_low_res_path: ".local/runs/<run_id>/real_task_images/doc_invoice_code_01/low_336.jpg"
+  prepared_roi_path: ".local/runs/<run_id>/real_task_images/doc_invoice_code_01/roi_foveater_roi_oracle_box_448.jpg"
   selected_image_paths:
     - role: "low_res_global"
-      path: ".local/runs/<run_id>/real_task_images/picsum_highres_1/low_336.jpg"
+      path: ".local/runs/<run_id>/real_task_images/doc_invoice_code_01/low_336.jpg"
     - role: "roi_crop"
-      path: ".local/runs/<run_id>/real_task_images/picsum_highres_1/roi_448.jpg"
-  roi_box_rel_xyxy: [0.18, 0.16, 0.82, 0.84]
-  roi_box_xyxy: [288, 192, 1312, 1008]
+      path: ".local/runs/<run_id>/real_task_images/doc_invoice_code_01/roi_foveater_roi_oracle_box_448.jpg"
+  roi_box_rel_xyxy: [0.6875, 0.041667, 0.9875, 0.3]
+  roi_box_xyxy: [1100, 50, 1580, 360]
+  target_box_rel_xyxy: [0.725, 0.091667, 0.95, 0.25]
+  target_box_xyxy: [1160, 110, 1520, 300]
+  roi_target_iou: 0.459677
+  roi_contains_target_evidence: true
   evidence_preparation: "manifest_image_resize_lowres_and_roi_crop"
   specialist_baseline_source: "same_backbone_after_load_times_count"
-  task_validation_level: "real_task_image_smoke"
-  source_semantics_version: "v0.2"
+  task_validation_level: "real_task_validation"
+  source_semantics_version: "v0.3"
   real_measurement_fields:
     - "base_after_load_allocated_mb"
     - "base_after_load_reserved_mb"
@@ -102,12 +111,12 @@ source:
     - "visual_token_count"
     - "prefill_latency_ms"
     - "generation_latency_ms"
+    - "task_score"
   estimate_or_proxy_fields:
     - "active_adapter_resident_mb"
     - "adapter_bank_resident_mb"
     - "generate_extra_peak_over_prefill_mb"
     - "multi_specialist_resident_estimate_mb"
-    - "task_score"
     - "verifier_score"
 
 routing:
