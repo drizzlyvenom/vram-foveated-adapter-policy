@@ -31,6 +31,27 @@ M-B_ROI_source_comparison:
     - layout_proxy_box는 controlled proxy다.
     - ocr_detector_box는 scripts/prepare_ocr_detector_manifest.py가 detector box를 기록한 manifest에서만 사용한다.
 
+ROI source 이름은 곧 claim boundary이므로 다음 taxonomy를 유지한다.
+
+```yaml
+roi_source_taxonomy:
+  center_crop:
+    role: "cheap heuristic baseline"
+    safe_claim: "target evidence miss에 취약한 기준선"
+  oracle_box:
+    role: "upper bound"
+    safe_claim: "ROI source가 충분히 좋을 때의 상한"
+  layout_proxy_box:
+    role: "controlled target-aware proxy"
+    safe_claim: "diagnostic set 내부 proxy"
+  ocr_detector_box:
+    role: "external detector output"
+    safe_claim: "detector ROI path smoke"
+  foveater_model:
+    role: "learned ROI policy"
+    safe_claim: "not yet validated"
+```
+
 M-C_tiny_scored_task_validation:
   goal: synthetic_proxy task_score를 실제 모델 답변의 normalized answer match로 교체
   required:
@@ -64,7 +85,7 @@ M-F_repeated_pilot:
     - visual_incremental_peak_mb_p95
     - controlled_fallback_peak_mb_all_samples_p95
 
-M-G_actual_ocr_detector_roi_smoke:
+M-G_ocr_detector_roi_path_smoke:
   goal: layout_proxy_box를 실제 OCR detector output인 ocr_detector_box로 교체하는 짧은 smoke
   required:
     - ocr_detector_available: true

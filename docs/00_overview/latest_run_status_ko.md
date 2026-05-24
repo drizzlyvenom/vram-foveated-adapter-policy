@@ -31,7 +31,7 @@ controlled_tiny_real_task_validation_available: true
 broad_real_task_validation_available: false
 trained_lora_evaluation_available: false
 tiny_trained_lora_smoke_available: true
-actual_ocr_detector_roi_smoke_available: true
+ocr_detector_roi_path_smoke_available: true
 measured_sequential_specialist_swap_smoke_available: true
 measured_full_specialist_joint_residency_available: false
 actual_peft_attach_smoke_available: true
@@ -128,7 +128,7 @@ current_claim_level:
   - memory_accounting_smoke
   - real_task_image_smoke
   - controlled_tiny_real_task_validation
-  - actual_ocr_detector_roi_smoke
+  - ocr_detector_roi_path_smoke
   - tiny_trained_lora_training_smoke
   - trained_lora_actual_peft_load_smoke
   - adapter_card_residency_estimate
@@ -140,7 +140,7 @@ not_yet_claimed:
   - trained_lora_accuracy_gain
   - measured_full_specialist_joint_residency
   - general_benchmark_accuracy
-  - actual_ocr_detector_roi_generalization
+  - ocr_detector_roi_generalization
   - external_benchmark_ocr_detector_roi
   - trained_lora_generalization
   - production_latency_or_p99
@@ -203,12 +203,39 @@ research_caution_review:
   trained_lora_matrix_completion_gate_false:
     status: "clarified"
     action: "C3/C4-only incomplete matrix by design; measurement_gate=true"
-  actual_ocr_detector_roi_claim_name:
+  ocr_detector_roi_claim_name:
     status: "cleaned"
-    action: "smoke claim과 generalization claim을 분리"
+    action: "ocr_detector_roi_path_smoke와 ocr_detector_roi_generalization으로 분리"
   default_cells_c6_c7:
     status: "resolved"
     action: "DEFAULT_CELLS와 extended gate 모두 C0-C7 포함 확인"
+```
+
+반복 지적을 current repo 기준으로 다시 판정하면 다음과 같다.
+
+```yaml
+repeated_issue_audit:
+  default_cells_c6_c7:
+    verdict: "stale"
+    current_evidence: "src/vfa_policy/core/validation_matrix.py DEFAULT_CELLS includes C0-C7"
+  smoke_vs_promotion_claims:
+    verdict: "real_risk"
+    current_action: "path smoke, diagnostic measurement, promotion claim을 문서에서 분리"
+  controlled_tiny_overclaim:
+    verdict: "real_risk"
+    current_action: "controlled tiny scored diagnostic set으로만 표현"
+  roi_source_claim_drift:
+    verdict: "real_risk"
+    current_action: "center/oracle/layout_proxy/ocr_detector source taxonomy 유지"
+  peft_path_vs_lora_gain:
+    verdict: "real_risk"
+    current_action: "actual PEFT load path와 accuracy gain을 분리"
+  partial_matrix_gate:
+    verdict: "real_risk"
+    current_action: "partial matrix는 measurement smoke로 보고 full completion과 분리"
+  qwen3_reference_backbone:
+    verdict: "paper_scope_risk"
+    current_action: "Qwen3-VL-4B는 reference/accounting anchor로 두고 lightweight sweep은 next work로 유지"
 ```
 
 ## 5. 다음 승격 조건

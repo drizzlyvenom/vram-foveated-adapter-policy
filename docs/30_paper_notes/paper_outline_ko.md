@@ -28,7 +28,7 @@ method:
 
 diagnostic_setup:
   - RTX 3090 24GB
-  - Qwen3-VL-4B local snapshot
+  - Qwen3-VL-4B local snapshot as reference/accounting anchor
   - controlled tiny scored image set
   - normalized answer matching
 
@@ -41,12 +41,31 @@ limitations:
   - controlled tiny set, not broad benchmark
   - layout_proxy_box, not external OCR detector
   - untrained PEFT attach, not trained LoRA gain
+  - Qwen3-VL-4B is a reference backbone, not a lightweight target sweep
   - production p95/p99 out of scope
 
 next_work:
   - ocr_detector_box oracle-gap measurement
   - external tiny subset
   - trained LoRA path
+  - lightweight 1B-3B VLM backbone sweep
+```
+
+## 2.1 Backbone 역할 분리
+
+```yaml
+backbone_roles:
+  qwen3_vl_4b:
+    role: "reference/accounting anchor"
+    safe_claim: "two-track accounting and diagnostic effects can be measured on RTX 3090"
+    unsafe_claim: "low-VRAM deployment target is solved"
+
+  small_vlm_1b_3b:
+    role: "future lightweight target sweep"
+    required_before_claim:
+      - external or held-out tiny subset
+      - same ROI source taxonomy
+      - same normal/fallback peak separation
 ```
 
 ## 3. 현재 abstract 재료

@@ -32,6 +32,20 @@ extended_completion_gate:
 
 하위 호환을 위해 top-level `completion_gate`는 minimum gate와 같은 의미로 유지한다. 소논문용 결과 표에는 extended gate를 함께 보고한다.
 
+부분 matrix smoke는 full completion으로 해석하지 않는다. `allow_incomplete_matrix=true`인 config는 요청된 subset이 제대로 측정됐는지 확인하는 measurement smoke이며, full C-matrix 검증과 따로 기록한다.
+
+```yaml
+full_matrix_completion_gate:
+  required_cells: [C0, C1, C2, C3, C4, C5, C6, C7]
+  use_for: "paper table or milestone completion"
+
+partial_matrix_measurement_gate:
+  required_cells: "config.combined_matrix.cells"
+  use_for: "actual PEFT attach/load path smoke or targeted diagnostic"
+  safe_claim: "requested subset was measured with the stated adapter/source semantics"
+  unsafe_claim: "full C-matrix is complete"
+```
+
 ## 2. Resident compression gates
 
 ### R1 multi-specialist baseline gate
