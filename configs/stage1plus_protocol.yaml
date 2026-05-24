@@ -1,0 +1,47 @@
+run:
+  name: "stage1plus_protocol_qwen3_vl"
+  output_dir: "runs"
+  seed: 42
+  max_samples: 20
+
+environment:
+  hf_home: "hf_cache"
+  device: "cuda"
+  dtype: "float16"
+
+model:
+  model_id: "Qwen/Qwen3-VL-4B-Instruct"
+  local_snapshot_path: "hf_cache/hub/models--Qwen--Qwen3-VL-4B-Instruct/snapshots/ebb281ec70b05090aa6165b016eac8ec08e71b17"
+  max_new_tokens: 32
+
+dataset:
+  manifest_path: "data/stage1_smoke/manifest.jsonl"
+
+adapter_registry:
+  path: "configs/stage1plus_adapter_cards.yaml"
+  execution_mode: "prompt_strategy_and_vram_residency_proxy"
+  claim_boundary: "Adapter-card isolation proxy only. This does not claim trained LoRA weight quality."
+
+image_policy:
+  low_res_hw: [336, 336]
+  roi_res_hw: [448, 448]
+  full_res_max_side: 1024
+  max_rois: 2
+
+budget:
+  max_peak_vram_mb: 22000
+  max_latency_ms: 20000
+  max_active_adapters_per_slot: 1
+
+router:
+  abstain_margin: 0.035
+  abstain_score_floor: 0.42
+  cost_penalty_weight: 0.035
+  conflict_penalty_weight: 0.35
+  lewm_hint_weight: 0.22
+
+verifier:
+  pass_score_threshold: 0.74
+  fallback_score_improvement: 0.20
+  quarantine_wrong_adapter_confidence_gain: 0.20
+  max_fallback_depth: 1

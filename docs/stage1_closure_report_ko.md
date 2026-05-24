@@ -128,7 +128,7 @@ Stage 2로 넘어가기 전에 선택 가능한 보강:
 ```text
 1. Stage 1 sample 수를 늘려 p95/p99를 안정화한다.
 2. TextVQA/DocVQA에 OCR box 또는 manual oracle ROI를 일부 추가한다.
-3. Qwen2.5-VL, InternVL, LLaVA 계열 중 3090에서 안정적으로 도는 VLM을 별도 environment에서 붙여 answer accuracy를 추가 측정한다.
+3. Qwen3-VL, InternVL, LLaVA 계열 중 3090에서 안정적으로 도는 VLM을 별도 environment에서 붙여 answer accuracy를 추가 측정한다.
 ```
 
 현재 기준으로는 Stage 1 smoke validation을 닫고 Stage 2 LoRA isolation 준비로 넘어갈 수 있다.

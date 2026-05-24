@@ -1,0 +1,192 @@
+adapter_cards:
+  - adapter_id: "doc_field_lora_proxy_r8"
+    base_model: "Qwen/Qwen3-VL-4B-Instruct"
+    slot: "V"
+    structure:
+      type: "independent_lora_proxy"
+      rank: 8
+      target_modules: ["q_proj", "k_proj", "v_proj", "o_proj"]
+      target_layers: "middle"
+    taxonomy:
+      domain:
+        document: 0.96
+        scene_text: 0.44
+        ui_screen: 0.18
+        chart: 0.24
+      evidence_type:
+        document_field: 0.92
+        small_text: 0.55
+        numeric_value: 0.42
+        ui_label: 0.18
+        chart_value: 0.26
+      visual_skill:
+        document_layout: 0.91
+        small_text_ocr: 0.68
+        table_reading: 0.38
+        ui_grounding: 0.15
+        chart_reading: 0.19
+      reasoning_style:
+        concise_answer: 0.72
+        extraction: 0.86
+    capability_probe:
+      extraction_score: 0.81
+      hard_negative_score: 0.42
+      general_regression: 0.04
+    serving:
+      resident_status: "warm"
+      adapter_memory_mb: 18.0
+      estimated_latency_ms: 4.5
+      load_cost_ms: 24.0
+      evict_cost_ms: 3.0
+    certification:
+      status: "experimental"
+      conflict_rate: 0.08
+      calibration_score: 0.68
+      registry_version: "stage1plus-0"
+      quarantine: false
+    proxy:
+      prompt_hint: "Use a document-field extraction strategy. Read headings, labels, nearby values, and answer with only the requested field."
+
+  - adapter_id: "scene_text_lora_proxy_r8"
+    base_model: "Qwen/Qwen3-VL-4B-Instruct"
+    slot: "V"
+    structure:
+      type: "independent_lora_proxy"
+      rank: 8
+      target_modules: ["q_proj", "k_proj", "v_proj", "o_proj"]
+      target_layers: "middle"
+    taxonomy:
+      domain:
+        document: 0.28
+        scene_text: 0.97
+        ui_screen: 0.24
+        chart: 0.16
+      evidence_type:
+        document_field: 0.25
+        small_text: 0.94
+        numeric_value: 0.38
+        ui_label: 0.28
+        chart_value: 0.12
+      visual_skill:
+        document_layout: 0.22
+        small_text_ocr: 0.96
+        table_reading: 0.15
+        ui_grounding: 0.25
+        chart_reading: 0.10
+      reasoning_style:
+        concise_answer: 0.76
+        extraction: 0.82
+    capability_probe:
+      extraction_score: 0.83
+      hard_negative_score: 0.47
+      general_regression: 0.05
+    serving:
+      resident_status: "hot"
+      adapter_memory_mb: 18.0
+      estimated_latency_ms: 3.8
+      load_cost_ms: 10.0
+      evict_cost_ms: 3.0
+    certification:
+      status: "experimental"
+      conflict_rate: 0.07
+      calibration_score: 0.70
+      registry_version: "stage1plus-0"
+      quarantine: false
+    proxy:
+      prompt_hint: "Use a scene-text OCR strategy. Focus on visible letters, logos, labels, and short printed text."
+
+  - adapter_id: "ui_screen_lora_proxy_r8"
+    base_model: "Qwen/Qwen3-VL-4B-Instruct"
+    slot: "V"
+    structure:
+      type: "independent_lora_proxy"
+      rank: 8
+      target_modules: ["q_proj", "k_proj", "v_proj", "o_proj"]
+      target_layers: "middle"
+    taxonomy:
+      domain:
+        document: 0.14
+        scene_text: 0.32
+        ui_screen: 0.98
+        chart: 0.10
+      evidence_type:
+        document_field: 0.14
+        small_text: 0.48
+        numeric_value: 0.55
+        ui_label: 0.95
+        chart_value: 0.12
+      visual_skill:
+        document_layout: 0.12
+        small_text_ocr: 0.58
+        table_reading: 0.10
+        ui_grounding: 0.96
+        chart_reading: 0.10
+      reasoning_style:
+        concise_answer: 0.78
+        extraction: 0.77
+    capability_probe:
+      extraction_score: 0.84
+      hard_negative_score: 0.49
+      general_regression: 0.04
+    serving:
+      resident_status: "hot"
+      adapter_memory_mb: 18.0
+      estimated_latency_ms: 3.6
+      load_cost_ms: 9.0
+      evict_cost_ms: 3.0
+    certification:
+      status: "experimental"
+      conflict_rate: 0.06
+      calibration_score: 0.73
+      registry_version: "stage1plus-0"
+      quarantine: false
+    proxy:
+      prompt_hint: "Use a mobile-UI grounding strategy. Read counters, buttons, section titles, and the relevant UI element."
+
+  - adapter_id: "chart_value_lora_proxy_r8"
+    base_model: "Qwen/Qwen3-VL-4B-Instruct"
+    slot: "V"
+    structure:
+      type: "independent_lora_proxy"
+      rank: 8
+      target_modules: ["q_proj", "k_proj", "v_proj", "o_proj"]
+      target_layers: "middle"
+    taxonomy:
+      domain:
+        document: 0.20
+        scene_text: 0.16
+        ui_screen: 0.10
+        chart: 0.98
+      evidence_type:
+        document_field: 0.18
+        small_text: 0.30
+        numeric_value: 0.82
+        ui_label: 0.10
+        chart_value: 0.95
+      visual_skill:
+        document_layout: 0.20
+        small_text_ocr: 0.34
+        table_reading: 0.55
+        ui_grounding: 0.10
+        chart_reading: 0.96
+      reasoning_style:
+        concise_answer: 0.70
+        extraction: 0.72
+    capability_probe:
+      extraction_score: 0.79
+      hard_negative_score: 0.43
+      general_regression: 0.06
+    serving:
+      resident_status: "warm"
+      adapter_memory_mb: 18.0
+      estimated_latency_ms: 4.8
+      load_cost_ms: 26.0
+      evict_cost_ms: 3.0
+    certification:
+      status: "experimental"
+      conflict_rate: 0.09
+      calibration_score: 0.66
+      registry_version: "stage1plus-0"
+      quarantine: false
+    proxy:
+      prompt_hint: "Use a chart-reading strategy. Inspect axes, bars, labels, legends, and numeric values before answering."

@@ -1,0 +1,18 @@
+# Stage 1+ optional environment for local VLM/accuracy smoke tests.
+# Install PyTorch from the CUDA wheel index first, then install this file.
+#
+# Windows / RTX 3090 example:
+#   .\.venv\Scripts\python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cu126
+#   .\.venv\Scripts\python -m pip install -r requirements-stage1plus.txt
+
+accelerate>=1.0
+datasets>=2.20
+huggingface_hub>=0.25
+numpy>=1.26,<3
+pandas>=2.2
+Pillow>=10.0
+PyYAML>=6.0
+qwen-vl-utils>=0.0.8
+requests>=2.31
+safetensors>=0.4
+transformers>=4.51

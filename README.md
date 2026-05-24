@@ -52,6 +52,8 @@ Stage 0은 기존 3090 cost simulation 결과를 replay해 logging contract를 �
 - Stage 1 데이터셋 후보: `docs/stage1_dataset_shortlist_ko.md`
 - Stage 0 closure: `docs/stage0_closure_report_ko.md`
 - Stage 1 closure: `docs/stage1_closure_report_ko.md`
+- Stage 1+ 환경: `docs/stage1plus_environment_ko.md`
+- Stage 1+ closure: `docs/stage1plus_closure_report_ko.md`
 
 Stage 0은 기존 RTX 3090 cost simulation 결과를 새 logging contract로 replay하는 단계입니다. 실제 VLM profiler 측정은 Stage 1부터 진행합니다.
 
@@ -68,3 +70,11 @@ Stage 1 smoke 재현:
 python scripts\prepare_stage1_dataset.py --config configs\stage1_foveation_smoke.yaml
 python scripts\run_stage1_foveation.py --config configs\stage1_foveation_smoke.yaml
 ```
+
+Stage 1+ protocol pilot 재현:
+
+```powershell
+.\.venv\Scripts\python scripts\run_stage1plus_protocol.py --config configs\stage1plus_protocol.yaml
+```
+
+Stage 1+는 Qwen3-VL-4B를 사용해 foveation quality, LoRA isolation proxy, taxonomy-card routing, LeWM-style feature augmentation, JEPA-style outcome routing, verifier/fallback/quarantine을 같은 RouteTrace 계약 안에서 검증합니다. 실제 학습된 LoRA weight의 성능 주장은 아직 포함하지 않습니다.

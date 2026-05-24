@@ -1,8 +1,8 @@
 # Privacy and Security Review
 
 Status: passed
-Date: 2026-05-21
-Scope: Stage 1 smoke validation changes
+Date: 2026-05-24
+Scope: Stage 0, Stage 1, Stage 1+ validation changes
 
 ## 1. 검토 범위
 
@@ -11,6 +11,7 @@ Scope: Stage 1 smoke validation changes
 ```text
 README.md
 requirements.txt
+requirements-stage1plus.txt
 configs/
 docs/
 schemas/
@@ -24,6 +25,7 @@ src/
 runs/
 data/
 hf_cache/
+.venv/
 vfa_verification_guidelines/
 ```
 
@@ -47,6 +49,7 @@ private key
 API key/token/secret/password 발견 없음
 다운로드 이미지와 manifest는 data/ 아래에 있으며 gitignore 적용됨
 실행 결과 JSONL/CSV는 runs/ 아래에 있으며 gitignore 적용됨
+Stage 1+ 모델 캐시와 venv는 hf_cache/, .venv/ 아래에 있으며 gitignore 적용됨
 ```
 
 ## 3. 보안 확인
@@ -76,11 +79,26 @@ scripts/run_stage1_foveation.py
 - manifest와 image_path가 repo 밖으로 나가면 거부
 ```
 
+Stage 1+ 실행 스크립트 보강:
+
+```text
+scripts/check_stage1plus_env.py
+- HF_HOME을 프로젝트 내부 hf_cache로 설정한 뒤 Hugging Face 라이브러리를 import
+- local_snapshot_path가 있으면 local_files_only로 Qwen3-VL-4B snapshot을 사용
+
+scripts/run_stage1plus_protocol.py
+src/vfa_policy/stage1plus_protocol.py
+- config, dataset manifest, image path, model snapshot path가 repo 밖으로 나가면 거부
+- yaml.safe_load 사용
+- shell=True 사용 없음
+- Stage 1+ LoRA 항목은 prompt/residency proxy라고 명시해 실제 fine-tuned LoRA 성능 주장과 분리
+```
+
 ## 4. 남은 주의점
 
-이번 Stage 1은 공개 Hugging Face 데이터셋의 이미지를 로컬에 다운로드한다. 해당 원본 이미지는 공개 데이터셋 샘플이지만, repo에는 포함하지 않는다.
+이번 Stage 1/1+는 공개 Hugging Face 데이터셋의 이미지를 로컬에 다운로드한다. 해당 원본 이미지는 공개 데이터셋 샘플이지만, repo에는 포함하지 않는다.
 
-Stage 1 결과 문서에는 정답 텍스트나 이미지 원본을 싣지 않고 aggregate metric만 기록했다.
+Stage 1+ 실행 로그에는 모델 답변과 crop artifact가 runs/ 아래에 남는다. runs/는 gitignore 대상이며, 공개 repo에는 요약 metric과 claim boundary 문서만 포함한다.
 
 ## 5. 결론
 
