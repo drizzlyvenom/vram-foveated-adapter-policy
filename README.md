@@ -113,7 +113,7 @@ Sequential specialist swap와 actual PEFT attach smoke:
 Tiny trained LoRA smoke:
 
 ```powershell
-.venv\Scripts\python.exe scripts\train_tiny_lora_smoke.py --manifest .local\data\tiny_scored_manifest\manifest_ocr_detector.jsonl --roi-source ocr_detector_box --max-samples 4 --max-steps 4 --rank 4 --alpha 8 --learning-rate 1e-4
+.venv\Scripts\python.exe scripts\train_tiny_lora_smoke.py --manifest .local\data\tiny_scored_manifest\manifest_ocr_detector.jsonl --roi-source ocr_detector_box --max-samples 4 --max-steps 4 --rank 4 --alpha 8 --learning-rate 1e-4 --label-mask-mode answer_only
 .venv\Scripts\python.exe scripts\run_3090_two_track_validation.py --config configs\3090\tiny_scored_trained_lora_matrix_smoke.yaml --real-run --max-samples 4 --max-new-tokens 8
 ```
 

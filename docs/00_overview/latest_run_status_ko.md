@@ -31,7 +31,10 @@ controlled_tiny_real_task_validation_available: true
 broad_real_task_validation_available: false
 trained_lora_evaluation_available: false
 tiny_trained_lora_smoke_available: true
+answer_only_lora_label_mask_smoke_available: true
 ocr_detector_roi_path_smoke_available: true
+ocr_detector_n16_stability_smoke_available: true
+ocr_detector_n32_cyclic_stability_smoke_available: true
 measured_sequential_specialist_swap_smoke_available: true
 measured_full_specialist_joint_residency_available: false
 actual_peft_attach_smoke_available: true
@@ -45,6 +48,10 @@ local_only_reference_runs:
   - .local/runs/20260524T095906Z-tiny_lora_train
   - .local/runs/20260524T095934Z-3090_tiny_scored_ocr_detector
   - .local/runs/20260524T095934Z-3090_tiny_scored_trained_lora_matrix_smoke
+  - .local/runs/20260524T105236Z-tiny_lora_train
+  - .local/runs/20260524T105259Z-3090_tiny_scored_trained_lora_matrix_smoke
+  - .local/runs/20260524T105330Z-3090_tiny_scored_ocr_detector
+  - .local/runs/20260524T105933Z-3090_tiny_scored_ocr_detector
   - .local/runs/20260524T080046Z-3090_two_track_pilot
   - .local/runs/20260524T072015Z-3090_two_track_pilot
   - .local/runs/20260524T062952Z-3090_two_track_pilot
@@ -120,6 +127,48 @@ latest_ocr_detector_and_trained_lora_smoke:
   trained_lora_accuracy_gain_claim: false
 ```
 
+P1 follow-up에서는 answer-only label masking을 기본값으로 바꾸고, 새 tiny LoRA smoke와 C3/C4 actual PEFT load smoke를 다시 실행했다. 또한 OCR detector ROI를 n=16, 이후 n=32 requested C0-C7 run으로 올려 completion/measurement gate를 확인했다.
+
+```yaml
+p1_answer_mask_and_ocr_stability:
+  result_brief: "docs/20_results/2026-05-24_p1_answer_mask_ocr_stability_ko.md"
+  answer_only_lora_train_run: "20260524T105236Z-tiny_lora_train"
+  answer_only_label_mask: true
+  supervised_token_count_mean: 6.0
+  answer_only_lora_losses: [0.061482, 0.0, 0.0, 0.000157]
+  answer_only_trained_lora_matrix_run: "20260524T105259Z-3090_tiny_scored_trained_lora_matrix_smoke"
+  answer_only_trained_lora_matrix_cells: [C3, C4]
+  answer_only_trained_lora_matrix_measurement_gate: true
+  ocr_detector_n16_run: "20260524T105330Z-3090_tiny_scored_ocr_detector"
+  ocr_detector_n16_samples: 16
+  ocr_detector_n16_completion_gate: true
+  ocr_detector_n16_extended_completion_gate: true
+  ocr_detector_n16_measurement_gate: true
+  ocr_detector_n32_run: "20260524T105933Z-3090_tiny_scored_ocr_detector"
+  ocr_detector_n32_requested_samples: 32
+  ocr_detector_n32_unique_manifest_samples: 20
+  ocr_detector_n32_sampling: "cyclic sample_for_index modulo manifest length"
+  ocr_detector_n32_completion_gate: true
+  ocr_detector_n32_extended_completion_gate: true
+  ocr_detector_n32_measurement_gate: true
+  ocr_detector_n32_c3_score: 0.9375
+  ocr_detector_n32_c4_score: 0.90625
+  ocr_detector_n32_c6_low_res_score: 0.125
+  ocr_detector_n32_c7_score: 0.90625
+  ocr_detector_n32_c4_visual_tokens: 296.0
+  ocr_detector_n32_c3_visual_tokens: 768.0
+  ocr_detector_n32_c4_controlled_fallback_all_samples_mean_mb: 8753.757844
+  ocr_detector_n32_c7_controlled_fallback_all_samples_mean_mb: 8962.467844
+  ocr_detector_n16_c3_score: 0.9375
+  ocr_detector_n16_c4_score: 0.875
+  ocr_detector_n16_c6_low_res_score: 0.125
+  ocr_detector_n16_c7_score: 0.875
+  ocr_detector_n16_c4_visual_tokens: 296.0
+  ocr_detector_n16_c3_visual_tokens: 768.0
+  ocr_detector_n16_c4_controlled_fallback_all_samples_mean_mb: 8753.809687
+  ocr_detector_n16_c7_controlled_fallback_all_samples_mean_mb: 8962.519687
+```
+
 ## 3. 현재 claim level
 
 ```yaml
@@ -184,8 +233,8 @@ estimate_or_proxy:
 
 ```yaml
 still_cautious:
-  - "OCR detector는 RapidOCR manifest 20/20 생성과 n=4 C0-C7 smoke까지 완료됐지만, n=16/n=32 반복 안정성은 아직 아니다."
-  - "tiny trained LoRA는 학습, 저장, 로드 경로 smoke가 완료됐지만, answer-only loss mask와 held-out 평가는 아직 아니다."
+  - "OCR detector는 RapidOCR manifest 20/20 생성과 n=32 requested C0-C7 cyclic smoke까지 완료됐지만, 32개 고유 샘플 또는 repeats=3 안정성은 아직 아니다."
+  - "tiny trained LoRA는 answer-only loss mask 학습/저장/로드 smoke가 완료됐지만, held-out 평가는 아직 아니다."
   - "trained LoRA matrix smoke는 의도적으로 C3/C4만 돌렸으므로 actual PEFT full C-matrix 검증으로 해석하지 않는다."
   - "C6/C7은 현재 DEFAULT_CELLS와 결과 산출물에 포함되어 있으나, 외부 benchmark claim으로 승격된 것은 아니다."
 ```
@@ -194,12 +243,12 @@ still_cautious:
 
 ```yaml
 research_caution_review:
-  ocr_detector_n4_smoke:
-    status: "still_cautious"
-    action: "needs_next에 n=16/n=32 stability run으로 유지"
+  ocr_detector_stability:
+    status: "advanced_to_n32_cyclic"
+    action: "needs_next에는 repeats=3 또는 32개 이상 고유 샘플 manifest로 축소 유지"
   tiny_lora_label_mask:
-    status: "still_cautious"
-    action: "needs_next에 answer-only LoRA training loss mask로 유지"
+    status: "implemented_and_smoked"
+    action: "held-out evaluation은 needs_next에 유지"
   trained_lora_matrix_completion_gate_false:
     status: "clarified"
     action: "C3/C4-only incomplete matrix by design; measurement_gate=true"
@@ -244,7 +293,7 @@ repeated_issue_audit:
 
 ```yaml
 next_promotion_steps:
-  - repeat ocr_detector_box run at n=16 or n=32/repeats=3
+  - repeat ocr_detector_box run with repeats=3 or 32+ unique samples
   - replace controlled tiny scored images with external benchmark or human-evaluated task set
   - evaluate trained LoRA weights on held-out or external samples, not only tiny training smoke
   - measure LoRA bank switch latency across multiple actual adapters
@@ -255,8 +304,8 @@ next_promotion_steps:
 
 ```yaml
 next_validation_queue:
-  - "ocr_detector_box n=16 또는 n=32/repeats=3으로 C0-C7 재실행"
-  - "LoRA 학습 label을 answer-only loss mask로 좁히고, tiny train/held-out split 분리"
+  - "ocr_detector_box repeats=3 또는 32개 이상 고유 샘플 manifest로 C0-C7 재실행"
+  - "answer-only LoRA를 20~50 step으로 늘리고 tiny train/held-out split 분리"
   - "trained adapter를 actual_loaded_adapter로 로드한 full C-matrix 실행, 최소 C0/C3/C4/C5/C6/C7"
   - "외부 tiny benchmark subset 또는 사람이 검수한 hold-out image task로 score source 교체"
   - "accuracy gain claim은 held-out trained LoRA 평가가 통과한 뒤에만 개방"
@@ -279,10 +328,13 @@ closed_for_current_milestone:
   - actual PEFT attach smoke
   - tiny trained LoRA save/load smoke
   - C6 low-res and C7 controlled fallback reporting in result briefs
+  - answer-only LoRA label mask smoke
+  - OCR detector n=16 C0-C7 stability smoke
+  - OCR detector n=32 cyclic C0-C7 stability smoke
 
 needs_next:
-  - ocr_detector_box n=16/n=32 stability run
-  - answer-only LoRA training loss mask
+  - ocr_detector_box repeats=3 or 32+ unique-sample stability run
+  - answer-only LoRA 20~50 step train/held-out evaluation
   - actual PEFT full C-matrix beyond C3/C4
   - external tiny benchmark subset
   - held-out trained LoRA evaluation before any accuracy-gain claim

@@ -109,7 +109,7 @@ safe:
 
 not_yet:
   - "OCR detector가 외부 benchmark에서도 oracle에 가깝다."
-  - "n=16/n=32 반복 안정성이 검증됐다."
+  - "32개 고유 샘플 또는 repeats=3 반복 안정성이 검증됐다."
 ```
 
 ## Tiny Trained LoRA Smoke

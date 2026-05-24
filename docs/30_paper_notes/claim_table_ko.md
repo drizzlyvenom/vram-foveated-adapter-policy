@@ -15,12 +15,14 @@ Status: claim boundary draft
 | 실제 OCR detector ROI path가 smoke 수준에서 동작했다. | RapidOCR 20/20 manifest + n=4 C0-C7 smoke | oracle 대체/generalization 아님 |
 | tiny trained LoRA 학습/저장/로드 경로가 닫혔다. | `train_tiny_lora_smoke.py` + C3/C4 actual PEFT load smoke | accuracy gain 아님 |
 | actual PEFT load path가 C3/C4 matrix smoke에 반영됐다. | `adapter_memory_source=actual_loaded_adapter` | full C-matrix 아님 |
+| answer-only label mask를 적용한 tiny LoRA smoke가 동작했다. | P1 answer-only run + supervised token count | held-out/accuracy gain 아님 |
+| OCR detector ROI가 n=32 requested C0-C7 smoke를 통과했다. | P1 OCR detector n=32 cyclic run | 32개 고유 샘플/repeats=3 및 external benchmark 아님 |
 
 ## Safe After New Runs
 
 | Claim | Required Evidence |
 |---|---|
-| ROI source 결과가 repeats=3에서도 같은 방향이다. | `run_roi_source_stability.py --execute` 결과 |
+| ROI source 결과가 repeats=3 또는 32개 이상 고유 샘플에서도 같은 방향이다. | `run_roi_source_stability.py --execute` 결과 |
 | trained adapter의 actual PEFT full C-matrix 비교가 가능하다. | 최소 C0/C3/C4/C5/C6/C7 actual_loaded_adapter run |
 
 ## Not Yet
@@ -28,9 +30,9 @@ Status: claim boundary draft
 | Unsafe Claim | Why Not |
 |---|---|
 | 일반 benchmark에서도 score retention이 유지된다. | 외부 benchmark subset이 아직 없음 |
-| trained LoRA가 정확도를 유지하거나 향상한다. | tiny trained path는 있으나 answer-only loss mask와 held-out 평가가 아직 없음 |
+| trained LoRA가 정확도를 유지하거나 향상한다. | answer-only training smoke는 있으나 held-out 평가가 아직 없음 |
 | tiny trained LoRA가 일반화된다. | 현재는 4-step controlled training smoke와 같은 tiny set load smoke |
-| actual OCR detector ROI가 안정적으로 oracle을 대체한다. | 현재는 n=4 controlled tiny smoke |
+| actual OCR detector ROI가 안정적으로 oracle을 대체한다. | 현재는 n=32 requested / 20 unique controlled tiny cyclic smoke |
 | `layout_proxy_box`가 실제 OCR detector다. | controlled manifest box |
 | 여러 다른 full specialist VLM의 joint residency를 실측했다. | 현재는 estimate 또는 sequential proxy |
 | production p95/p99 latency가 검증됐다. | 단일-user local pilot |

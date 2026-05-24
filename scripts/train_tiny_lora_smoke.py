@@ -73,12 +73,52 @@ def _messages(image_paths: list[Path], prompt: str, answer: str | None = None) -
     return messages
 
 
-def _prepare_training_inputs(processor: Any, image_paths: list[Path], prompt: str, answer: str, device: str) -> Any:
-    import torch
+def _mask_training_labels(
+    input_ids: Any,
+    *,
+    prompt_token_count: int,
+    pad_token_id: int | None,
+    label_mask_mode: str,
+) -> tuple[Any, dict[str, int | str]]:
+    labels = input_ids.clone()
+    input_token_count = int(labels.shape[-1])
+
+    if label_mask_mode == "answer_only":
+        labels[:, : min(prompt_token_count, input_token_count)] = -100
+    elif label_mask_mode != "full_sequence_except_pad":
+        raise ValueError(f"Unsupported label_mask_mode: {label_mask_mode}")
+
+    if pad_token_id is not None:
+        labels[labels == pad_token_id] = -100
+
+    supervised_token_count = int((labels != -100).sum().item())
+    if supervised_token_count <= 0:
+        raise RuntimeError(
+            "No supervised tokens remain after label masking; check chat template and answer text."
+        )
+
+    return labels, {
+        "label_mask_mode": label_mask_mode,
+        "input_token_count": input_token_count,
+        "prompt_token_count": int(prompt_token_count),
+        "supervised_token_count": supervised_token_count,
+    }
+
+
+def _prepare_training_inputs(
+    processor: Any,
+    image_paths: list[Path],
+    prompt: str,
+    answer: str,
+    device: str,
+    label_mask_mode: str,
+) -> tuple[Any, dict[str, int | str]]:
     from qwen_vl_utils import process_vision_info
 
     messages = _messages(image_paths, prompt, answer)
+    prompt_messages = _messages(image_paths, prompt, None)
     text = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=False)
+    prompt_text = processor.apply_chat_template(prompt_messages, tokenize=False, add_generation_prompt=True)
     image_inputs, video_inputs = process_vision_info(messages)
     inputs = processor(
         text=[text],
@@ -87,12 +127,23 @@ def _prepare_training_inputs(processor: Any, image_paths: list[Path], prompt: st
         padding=True,
         return_tensors="pt",
     )
-    labels = inputs["input_ids"].clone()
+    prompt_inputs = processor(
+        text=[prompt_text],
+        images=image_inputs,
+        videos=video_inputs,
+        padding=True,
+        return_tensors="pt",
+    )
     pad_token_id = getattr(processor.tokenizer, "pad_token_id", None)
-    if pad_token_id is not None:
-        labels[labels == pad_token_id] = -100
+    labels, mask_info = _mask_training_labels(
+        inputs["input_ids"],
+        prompt_token_count=int(prompt_inputs["input_ids"].shape[-1]),
+        pad_token_id=pad_token_id,
+        label_mask_mode=label_mask_mode,
+    )
     inputs["labels"] = labels
-    return inputs.to(device)
+    del prompt_inputs
+    return inputs.to(device), mask_info
 
 
 def main() -> int:
@@ -109,6 +160,12 @@ def main() -> int:
     parser.add_argument("--learning-rate", type=float, default=1e-4)
     parser.add_argument("--output-dir", default=".local/adapters")
     parser.add_argument("--latest-name", default="tiny_lora_latest")
+    parser.add_argument(
+        "--label-mask-mode",
+        choices=["answer_only", "full_sequence_except_pad"],
+        default="answer_only",
+        help="Use answer_only for real training claims; full_sequence_except_pad is legacy smoke behavior.",
+    )
     args = parser.parse_args()
 
     import torch
@@ -171,6 +228,7 @@ def main() -> int:
     optimizer = torch.optim.AdamW((param for param in model.parameters() if param.requires_grad), lr=float(args.learning_rate))
 
     losses: list[float] = []
+    mask_infos: list[dict[str, int | str]] = []
     torch.cuda.reset_peak_memory_stats()
     for step in range(int(args.max_steps)):
         sample = sample_for_index(manifest_samples, step % int(args.max_samples))
@@ -184,13 +242,15 @@ def main() -> int:
             repo_root=REPO_ROOT,
             roi_source_override=str(args.roi_source),
         )
-        inputs = _prepare_training_inputs(
+        inputs, mask_info = _prepare_training_inputs(
             processor,
             evidence["image_paths"],
             str(sample.get("prompt") or "Answer the image question."),
             _answer(sample),
             "cuda:0",
+            str(args.label_mask_mode),
         )
+        mask_infos.append(mask_info)
         optimizer.zero_grad(set_to_none=True)
         outputs = model(**inputs)
         loss = outputs.loss
@@ -239,6 +299,24 @@ def main() -> int:
         "alpha": int(args.alpha),
         "target_modules": target_modules,
         "learning_rate": float(args.learning_rate),
+        "label_mask_mode": str(args.label_mask_mode),
+        "supervised_token_count_min": min((int(item["supervised_token_count"]) for item in mask_infos), default=None),
+        "supervised_token_count_max": max((int(item["supervised_token_count"]) for item in mask_infos), default=None),
+        "supervised_token_count_mean": (
+            round(sum(int(item["supervised_token_count"]) for item in mask_infos) / len(mask_infos), 3)
+            if mask_infos
+            else None
+        ),
+        "input_token_count_mean": (
+            round(sum(int(item["input_token_count"]) for item in mask_infos) / len(mask_infos), 3)
+            if mask_infos
+            else None
+        ),
+        "prompt_token_count_mean": (
+            round(sum(int(item["prompt_token_count"]) for item in mask_infos) / len(mask_infos), 3)
+            if mask_infos
+            else None
+        ),
         "base_load_latency_ms": base_load_latency_ms,
         "base_after_load_allocated_mb": base_after_load_allocated_mb,
         "peft_attach_latency_ms": attach_latency_ms,
@@ -251,6 +329,7 @@ def main() -> int:
         "claim_boundary": {
             "trained_adapter_saved": True,
             "tiny_controlled_training_smoke": True,
+            "answer_only_label_mask": str(args.label_mask_mode) == "answer_only",
             "benchmark_generalization_claim": False,
             "trained_lora_accuracy_gain_claim": False,
         },
@@ -266,6 +345,8 @@ def main() -> int:
                 f"- latest_adapter_dir: `{result['latest_adapter_dir']}`",
                 f"- train_steps: `{result['train_steps']}`",
                 f"- trainable_lora_parameters: `{result['trainable_lora_parameters']}`",
+                f"- label_mask_mode: `{result['label_mask_mode']}`",
+                f"- supervised_token_count_mean: `{result['supervised_token_count_mean']}`",
                 f"- loss_first: `{result['loss_first']}`",
                 f"- loss_last: `{result['loss_last']}`",
                 f"- train_peak_allocated_mb: `{result['train_peak_allocated_mb']}`",
