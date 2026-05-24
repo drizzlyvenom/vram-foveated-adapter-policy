@@ -113,6 +113,9 @@ latest_ocr_detector_and_trained_lora_smoke:
   tiny_lora_trainable_parameters: 1474560
   trained_lora_matrix_run: "20260524T095934Z-3090_tiny_scored_trained_lora_matrix_smoke"
   trained_lora_matrix_cells: [C3, C4]
+  trained_lora_matrix_completion_gate: false
+  trained_lora_matrix_completion_gate_reason: "C3/C4-only incomplete matrix by design"
+  trained_lora_matrix_measurement_gate: true
   trained_lora_adapter_memory_source: "actual_loaded_adapter"
   trained_lora_accuracy_gain_claim: false
 ```
@@ -185,6 +188,27 @@ still_cautious:
   - "tiny trained LoRA는 학습, 저장, 로드 경로 smoke가 완료됐지만, answer-only loss mask와 held-out 평가는 아직 아니다."
   - "trained LoRA matrix smoke는 의도적으로 C3/C4만 돌렸으므로 actual PEFT full C-matrix 검증으로 해석하지 않는다."
   - "C6/C7은 현재 DEFAULT_CELLS와 결과 산출물에 포함되어 있으나, 외부 benchmark claim으로 승격된 것은 아니다."
+```
+
+리서치 메모의 4번 항목을 현재 repo 기준으로 다시 대조하면 다음과 같다.
+
+```yaml
+research_caution_review:
+  ocr_detector_n4_smoke:
+    status: "still_cautious"
+    action: "needs_next에 n=16/n=32 stability run으로 유지"
+  tiny_lora_label_mask:
+    status: "still_cautious"
+    action: "needs_next에 answer-only LoRA training loss mask로 유지"
+  trained_lora_matrix_completion_gate_false:
+    status: "clarified"
+    action: "C3/C4-only incomplete matrix by design; measurement_gate=true"
+  actual_ocr_detector_roi_claim_name:
+    status: "cleaned"
+    action: "smoke claim과 generalization claim을 분리"
+  default_cells_c6_c7:
+    status: "resolved"
+    action: "DEFAULT_CELLS와 extended gate 모두 C0-C7 포함 확인"
 ```
 
 ## 5. 다음 승격 조건

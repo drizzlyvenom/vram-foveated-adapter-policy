@@ -12,22 +12,23 @@ Status: claim boundary draft
 | oracle/layout proxy ROI는 full-image score를 유지하면서 visual tokens를 줄였다. | scored ROI brief | layout proxy는 external OCR이 아님 |
 | low-res only는 비용은 낮지만 score가 크게 떨어졌다. | C6 score | tiny set 기준 |
 | sequential full-model reload와 actual PEFT attach memory/latency smoke를 측정했다. | swap smoke, actual PEFT smoke | trained LoRA gain 아님 |
+| 실제 OCR detector ROI path가 smoke 수준에서 동작했다. | RapidOCR 20/20 manifest + n=4 C0-C7 smoke | oracle 대체/generalization 아님 |
+| tiny trained LoRA 학습/저장/로드 경로가 닫혔다. | `train_tiny_lora_smoke.py` + C3/C4 actual PEFT load smoke | accuracy gain 아님 |
+| actual PEFT load path가 C3/C4 matrix smoke에 반영됐다. | `adapter_memory_source=actual_loaded_adapter` | full C-matrix 아님 |
 
 ## Safe After New Runs
 
 | Claim | Required Evidence |
 |---|---|
-| 실제 OCR detector ROI의 smoke가 동작했다. | `manifest_ocr_detector.jsonl` + `ocr_detector_available=true` samples |
-| actual PEFT attach delta가 C3/C4 matrix trace에 반영됐다. | `adapter_memory_source=actual_loaded_adapter` in C3/C4 run |
-| tiny trained LoRA 학습/저장/로드 경로가 닫혔다. | `train_tiny_lora_smoke.py` + trained adapter matrix smoke |
 | ROI source 결과가 repeats=3에서도 같은 방향이다. | `run_roi_source_stability.py --execute` 결과 |
+| trained adapter의 actual PEFT full C-matrix 비교가 가능하다. | 최소 C0/C3/C4/C5/C6/C7 actual_loaded_adapter run |
 
 ## Not Yet
 
 | Unsafe Claim | Why Not |
 |---|---|
 | 일반 benchmark에서도 score retention이 유지된다. | 외부 benchmark subset이 아직 없음 |
-| trained LoRA가 정확도를 유지하거나 향상한다. | 현재 PEFT는 untrained attach smoke |
+| trained LoRA가 정확도를 유지하거나 향상한다. | tiny trained path는 있으나 answer-only loss mask와 held-out 평가가 아직 없음 |
 | tiny trained LoRA가 일반화된다. | 현재는 4-step controlled training smoke와 같은 tiny set load smoke |
 | actual OCR detector ROI가 안정적으로 oracle을 대체한다. | 현재는 n=4 controlled tiny smoke |
 | `layout_proxy_box`가 실제 OCR detector다. | controlled manifest box |

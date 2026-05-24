@@ -58,6 +58,7 @@ trained_lora_matrix_smoke:
   roi_source: "ocr_detector_box"
   matrix_cells: [C3, C4]
   completion_gate: false
+  completion_gate_reason: "C3/C4-only incomplete matrix by design"
   measurement_gate: true
 ```
 
@@ -149,6 +150,7 @@ source_summary:
 safe:
   - "tiny controlled LoRA training smoke에서 adapter 학습, 저장, actual PEFT 로드 경로가 닫혔다."
   - "trained adapter path가 C3/C4 matrix smoke에서 actual_loaded_adapter로 기록됐다."
+  - "trained LoRA matrix smoke의 completion_gate=false는 C3/C4-only incomplete matrix 설계 때문이며, measurement_gate는 true다."
 
 not_yet:
   - "trained LoRA가 정확도를 향상했다."
