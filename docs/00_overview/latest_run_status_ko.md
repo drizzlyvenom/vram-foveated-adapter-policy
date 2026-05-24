@@ -30,6 +30,8 @@ real_task_image_smoke_available: true
 controlled_tiny_real_task_validation_available: true
 broad_real_task_validation_available: false
 trained_lora_evaluation_available: false
+tiny_trained_lora_smoke_available: true
+actual_ocr_detector_roi_smoke_available: true
 measured_sequential_specialist_swap_smoke_available: true
 measured_full_specialist_joint_residency_available: false
 actual_peft_attach_smoke_available: true
@@ -40,6 +42,9 @@ local_only_reference_runs:
   - .local/runs/20260524T090316Z-3090_tiny_scored_validation
   - .local/runs/20260524T090422Z-specialist_swap_smoke
   - .local/runs/20260524T090446Z-actual_peft_smoke
+  - .local/runs/20260524T095906Z-tiny_lora_train
+  - .local/runs/20260524T095934Z-3090_tiny_scored_ocr_detector
+  - .local/runs/20260524T095934Z-3090_tiny_scored_trained_lora_matrix_smoke
   - .local/runs/20260524T080046Z-3090_two_track_pilot
   - .local/runs/20260524T072015Z-3090_two_track_pilot
   - .local/runs/20260524T062952Z-3090_two_track_pilot
@@ -78,6 +83,29 @@ latest_scored_roi_validation:
 
 이 상태는 controlled tiny set에서의 실측 pass를 의미한다. 일반 benchmark 우월성, trained LoRA accuracy gain, 실제 OCR detector ROI, full specialist joint residency는 아직 검증된 상태가 아니다.
 
+추가로 `a59c040` 작업면에서 RapidOCR 기반 `ocr_detector_box`와 tiny trained LoRA smoke를 실행했다. `ocr_detector_box` manifest는 20/20 detector boxes를 생성했고, n=4 real CUDA C0-C7 smoke에서 measurement gate를 통과했다. rank-4 q_proj/v_proj LoRA는 4 step 학습되어 `.local/adapters/tiny_lora_latest`에 저장됐고, C3/C4 matrix smoke에서 `adapter_memory_source=actual_loaded_adapter`로 로드됐다. 이는 학습/저장/로드 경로 smoke이며, trained LoRA accuracy gain claim은 여전히 열지 않는다.
+
+```yaml
+latest_ocr_detector_and_trained_lora_smoke:
+  ocr_manifest_output: ".local/data/tiny_scored_manifest/manifest_ocr_detector.jsonl"
+  ocr_detector_available: "20/20"
+  ocr_detector_run: "20260524T095934Z-3090_tiny_scored_ocr_detector"
+  ocr_detector_samples: 4
+  ocr_detector_completion_gate: true
+  ocr_detector_measurement_gate: true
+  ocr_detector_c4_task_score_mean: 1.0
+  ocr_detector_c4_visual_tokens: 296.0
+  ocr_detector_c3_visual_tokens: 768.0
+  tiny_lora_train_run: "20260524T095906Z-tiny_lora_train"
+  latest_adapter_dir: ".local/adapters/tiny_lora_latest"
+  tiny_lora_train_steps: 4
+  tiny_lora_trainable_parameters: 1474560
+  trained_lora_matrix_run: "20260524T095934Z-3090_tiny_scored_trained_lora_matrix_smoke"
+  trained_lora_matrix_cells: [C3, C4]
+  trained_lora_adapter_memory_source: "actual_loaded_adapter"
+  trained_lora_accuracy_gain_claim: false
+```
+
 ## 3. 현재 claim level
 
 ```yaml
@@ -86,6 +114,9 @@ current_claim_level:
   - memory_accounting_smoke
   - real_task_image_smoke
   - controlled_tiny_real_task_validation
+  - actual_ocr_detector_roi_smoke
+  - tiny_trained_lora_training_smoke
+  - trained_lora_actual_peft_load_smoke
   - adapter_card_residency_estimate
   - multi_specialist_resident_estimate
   - sequential_specialist_swap_smoke
@@ -96,6 +127,7 @@ not_yet_claimed:
   - measured_full_specialist_joint_residency
   - general_benchmark_accuracy
   - actual_ocr_detector_roi
+  - trained_lora_generalization
   - production_latency_or_p99
   - final_milestone_closure_beyond_controlled_tiny_set
 ```
@@ -116,6 +148,8 @@ real_measurement:
   - sequential specialist proxy load/unload latency in run_specialist_swap_smoke.py
   - actual PEFT attach memory delta and forward path in run_actual_peft_smoke.py
   - actual PEFT attach memory delta in C3/C4 matrix smoke only when adapter_memory_source=actual_loaded_adapter
+  - ocr_detector_box when ocr_detector_available=true in manifest_ocr_detector.jsonl
+  - tiny trained LoRA adapter load smoke when adapter_path points to .local/adapters/tiny_lora_latest
 
 estimate_or_proxy:
   - adapter_bank_resident_mb from adapter cards
@@ -125,6 +159,7 @@ estimate_or_proxy:
   - verifier_score
   - roi quality and roi recall under center_crop or synthetic_probe mode
   - layout_proxy_box and detector_proxy_box until an external detector writes ocr_detector_box fields
+  - trained LoRA accuracy gain until external or held-out evaluation is run
   - generate_extra_peak_over_prefill_mb as generate-minus-prefill proxy
 ```
 
@@ -134,9 +169,9 @@ estimate_or_proxy:
 
 ```yaml
 next_promotion_steps:
-  - replace layout_proxy_box with actual OCR detector ROI via manifest_ocr_detector.jsonl
+  - repeat ocr_detector_box run at n=16 or n=32/repeats=3
   - replace controlled tiny scored images with external benchmark or human-evaluated task set
-  - evaluate trained LoRA weights, not random PEFT attach
+  - evaluate trained LoRA weights on held-out or external samples, not only tiny training smoke
   - measure LoRA bank switch latency across multiple actual adapters
   - measure full specialist joint residency only on larger hardware, or keep it as an explicit estimate
 ```

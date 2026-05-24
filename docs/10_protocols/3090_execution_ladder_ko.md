@@ -63,6 +63,26 @@ M-F_repeated_pilot:
     - normal_path_peak_mb_p95
     - visual_incremental_peak_mb_p95
     - controlled_fallback_peak_mb_all_samples_p95
+
+M-G_actual_ocr_detector_roi_smoke:
+  goal: layout_proxy_box를 실제 OCR detector output인 ocr_detector_box로 교체하는 짧은 smoke
+  required:
+    - ocr_detector_available: true
+    - roi_source: ocr_detector_box
+    - actual_image_execution: true
+    - task_score_source: normalized_answer_match
+  boundary:
+    - controlled tiny smoke이며 외부 benchmark oracle gap claim은 아직 아니다.
+
+M-H_tiny_trained_lora_smoke:
+  goal: random PEFT attach를 넘어 tiny trained adapter의 학습/저장/로드 경로를 닫음
+  required:
+    - trained_adapter_saved: true
+    - adapter_memory_source: actual_loaded_adapter
+    - adapter_execution_mode: actual_peft
+    - adapter_path: ".local/adapters/tiny_lora_latest"
+  boundary:
+    - training path smoke이며 trained LoRA accuracy gain claim은 아직 아니다.
 ```
 
 ## R0. Memory accounting smoke

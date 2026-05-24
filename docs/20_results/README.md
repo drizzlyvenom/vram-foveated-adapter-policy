@@ -26,6 +26,7 @@ do_not_commit_by_default:
 
 | Date | Brief | Run | Status |
 |---|---|---|---|
+| 2026-05-24 | [OCR detector / tiny trained LoRA smoke](2026-05-24_ocr_detector_trained_lora_smoke_ko.md) | `20260524T095934Z`, `20260524T095906Z` | detector + trained adapter smoke |
 | 2026-05-24 | [Scored ROI / swap / PEFT validation](2026-05-24_scored_roi_swap_peft_validation_ko.md) | `20260524T090102Z`, `20260524T090206Z`, `20260524T090316Z` | M-B~M-F initial measured pass |
 | 2026-05-24 | [Metric/gate semantics closure](2026-05-24_metric_gate_semantics_closure_ko.md) | `20260524T080046Z-3090_two_track_pilot` | metric/gate semantics closure |
 | 2026-05-24 | [Reproducibility + source semantics closure](2026-05-24_reproducibility_source_semantics_closure_ko.md) | `20260524T072015Z-3090_two_track_pilot` | reproducibility/source-semantics closure |

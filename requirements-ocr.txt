@@ -1,4 +1,5 @@
+rapidocr-onnxruntime>=1.4.4
 pytesseract>=0.3.10
 
-# This Python package still requires the external Tesseract OCR binary.
-# Windows users can install it separately and make sure `tesseract` is on PATH.
+# rapidocr-onnxruntime is the default pip-only OCR path.
+# pytesseract is a fallback and still requires the external Tesseract OCR binary.

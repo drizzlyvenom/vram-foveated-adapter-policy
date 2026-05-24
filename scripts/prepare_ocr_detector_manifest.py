@@ -11,7 +11,7 @@ SRC_ROOT = REPO_ROOT / "src"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
-from vfa_policy.foveation.ocr_detector import detect_ocr_roi_with_pytesseract, rel_box
+from vfa_policy.foveation.ocr_detector import detect_ocr_roi, rel_box
 
 
 DEFAULT_INPUT = ".local/data/tiny_scored_manifest/manifest.jsonl"
@@ -58,8 +58,8 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", default=DEFAULT_INPUT, help="Input JSONL manifest.")
     parser.add_argument("--output", default=DEFAULT_OUTPUT, help="Output JSONL manifest with OCR detector boxes.")
-    parser.add_argument("--engine", choices=["pytesseract"], default="pytesseract")
-    parser.add_argument("--min-confidence", type=float, default=25.0)
+    parser.add_argument("--engine", choices=["rapidocr", "pytesseract"], default="rapidocr")
+    parser.add_argument("--min-confidence", type=float, default=None)
     parser.add_argument("--pad-px", type=int, default=32)
     parser.add_argument(
         "--allow-missing",
@@ -77,9 +77,10 @@ def main() -> int:
     for idx, row in enumerate(rows):
         updated = dict(row)
         image_path = _resolve(str(row["full_image_path"]))
-        result = detect_ocr_roi_with_pytesseract(
+        result = detect_ocr_roi(
             image_path,
-            min_confidence=float(args.min_confidence),
+            engine=str(args.engine),
+            min_confidence=None if args.min_confidence is None else float(args.min_confidence),
             pad_px=int(args.pad_px),
         )
         updated["ocr_detector_engine"] = result.engine

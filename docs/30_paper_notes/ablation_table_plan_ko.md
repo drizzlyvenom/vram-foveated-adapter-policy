@@ -25,6 +25,7 @@ Status: table plan
 | proxy LoRA bank | adapter cards | estimate | estimated | estimated | accounting scaffold |
 | actual PEFT attach | actual loaded adapter | measured smoke | measured delta | measured attach | untrained smoke |
 | actual PEFT C3/C4 matrix | actual loaded adapter | measured matrix smoke | pending | pending | no accuracy gain |
+| tiny trained LoRA path | saved adapter under `.local/adapters` | measured matrix smoke | measured | measured | training-path smoke |
 
 ## Table 3. Combined C-Matrix
 

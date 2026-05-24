@@ -206,6 +206,7 @@ class Qwen3VLRealProbe:
         if str(adapter_bank_config.get("execution_mode") or "") != "actual_peft":
             return
         actual = dict(adapter_bank_config.get("actual_peft") or {})
+        adapter_path = actual.get("adapter_path") or adapter_bank_config.get("adapter_path")
         target_modules = actual.get("target_modules") or adapter_bank_config.get("target_modules") or ["q_proj", "v_proj"]
         if isinstance(target_modules, str):
             target_modules = [item.strip() for item in target_modules.split(",") if item.strip()]
@@ -213,23 +214,33 @@ class Qwen3VLRealProbe:
         alpha = int(actual.get("alpha") or adapter_bank_config.get("alpha") or 8)
 
         try:
-            from peft import LoraConfig, get_peft_model
+            from peft import LoraConfig, PeftModel, get_peft_model
         except ImportError as exc:
             raise RuntimeError("adapter_bank.execution_mode=actual_peft requires peft from requirements.txt.") from exc
 
         torch = self.torch
         before_allocated = _cuda_allocated_mb(torch)
         before_reserved = _cuda_reserved_mb(torch)
-        config = LoraConfig(
-            r=rank,
-            lora_alpha=alpha,
-            target_modules=list(target_modules),
-            lora_dropout=float(actual.get("dropout", 0.0)),
-            bias=str(actual.get("bias", "none")),
-            task_type=str(actual.get("task_type", "CAUSAL_LM")),
-        )
         started = time.perf_counter()
-        self.model = get_peft_model(self.model, config)
+        if adapter_path:
+            path = Path(adapter_path)
+            if not path.is_absolute():
+                path = Path.cwd() / path
+            self.model = PeftModel.from_pretrained(
+                self.model,
+                path,
+                is_trainable=bool(actual.get("is_trainable", False)),
+            )
+        else:
+            config = LoraConfig(
+                r=rank,
+                lora_alpha=alpha,
+                target_modules=list(target_modules),
+                lora_dropout=float(actual.get("dropout", 0.0)),
+                bias=str(actual.get("bias", "none")),
+                task_type=str(actual.get("task_type", "CAUSAL_LM")),
+            )
+            self.model = get_peft_model(self.model, config)
         self.model.eval()
         _sync(torch)
         after_allocated = _cuda_allocated_mb(torch)
@@ -237,7 +248,9 @@ class Qwen3VLRealProbe:
         self.adapter_runtime = {
             "adapter_execution_mode": "actual_peft",
             "adapter_memory_source": "actual_loaded_adapter",
-            "uses_random_untrained_adapter": bool(actual.get("uses_random_untrained_adapter", True)),
+            "uses_random_untrained_adapter": bool(actual.get("uses_random_untrained_adapter", not bool(adapter_path))),
+            "trained_adapter_loaded": bool(adapter_path),
+            "adapter_path": str(adapter_path) if adapter_path else None,
             "rank": rank,
             "alpha": alpha,
             "target_modules": list(target_modules),

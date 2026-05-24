@@ -98,7 +98,7 @@ Optional OCR detector ROI manifest:
 
 ```powershell
 .venv\Scripts\python.exe -m pip install -r requirements-ocr.txt
-.venv\Scripts\python.exe scripts\prepare_ocr_detector_manifest.py --input .local\data\tiny_scored_manifest\manifest.jsonl --output .local\data\tiny_scored_manifest\manifest_ocr_detector.jsonl
+.venv\Scripts\python.exe scripts\prepare_ocr_detector_manifest.py --input .local\data\tiny_scored_manifest\manifest.jsonl --output .local\data\tiny_scored_manifest\manifest_ocr_detector.jsonl --engine rapidocr
 .venv\Scripts\python.exe scripts\run_3090_two_track_validation.py --config configs\3090\tiny_scored_ocr_detector.yaml --real-run --max-samples 16 --max-new-tokens 8
 ```
 
@@ -108,6 +108,13 @@ Sequential specialist swap와 actual PEFT attach smoke:
 .venv\Scripts\python.exe scripts\run_specialist_swap_smoke.py --config configs\3090\tiny_scored_validation.yaml --repeats 3
 .venv\Scripts\python.exe scripts\run_actual_peft_smoke.py --config configs\3090\tiny_scored_validation.yaml --rank 4 --alpha 8
 .venv\Scripts\python.exe scripts\run_3090_two_track_validation.py --config configs\3090\tiny_scored_actual_peft_matrix_smoke.yaml --real-run --max-samples 4 --max-new-tokens 8
+```
+
+Tiny trained LoRA smoke:
+
+```powershell
+.venv\Scripts\python.exe scripts\train_tiny_lora_smoke.py --manifest .local\data\tiny_scored_manifest\manifest_ocr_detector.jsonl --roi-source ocr_detector_box --max-samples 4 --max-steps 4 --rank 4 --alpha 8 --learning-rate 1e-4
+.venv\Scripts\python.exe scripts\run_3090_two_track_validation.py --config configs\3090\tiny_scored_trained_lora_matrix_smoke.yaml --real-run --max-samples 4 --max-new-tokens 8
 ```
 
 ROI source stability plan:
