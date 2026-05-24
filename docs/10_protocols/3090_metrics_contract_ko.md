@@ -163,9 +163,9 @@ source:
   visual_token_source: qwen3_vl_image_grid_thw | dry_run_visual_estimate
   quality_source: synthetic_proxy | normalized_answer_match | benchmark_label | human_eval | external_verifier
   task_score_source: synthetic_proxy | normalized_answer_match | benchmark_label | human_eval | external_verifier
-  adapter_memory_source: adapter_card_estimate | measured_adapter_residency
+  adapter_memory_source: adapter_card_estimate | actual_loaded_adapter | measured_adapter_residency
   adapter_execution_mode: shared_backbone_only | proxy_card_accounting | actual_peft | merged_lora
-  roi_source: synthetic_probe | center_crop | oracle_box | ocr_box_or_layout_box | foveater_model
+  roi_source: synthetic_probe | center_crop | oracle_box | layout_proxy_box | detector_proxy_box | ocr_detector_box | foveater_model
   data_mode: synthetic_probe | stage1_smoke_manifest | real_task_manifest | tiny_scored_manifest
   image_source: dry_run_config_estimate | synthetic_probe_generated_images | manifest.full_image_path | manifest.metadata_only_dry_run
   actual_image_execution: false
@@ -191,6 +191,8 @@ source:
   real_measurement_fields: []
   estimate_or_proxy_fields: []
 ```
+
+`ocr_box_or_layout_box`는 2026-05-24 tiny scored pass의 과거 호환 이름으로만 남긴다. 새 run에서는 `layout_proxy_box`를 controlled layout/target-aware proxy로 쓰고, 외부 OCR detector가 실제로 만든 box는 `ocr_detector_box`로 분리한다.
 
 `decode_incremental_peak_mb`는 호환성을 위해 유지하지만, 현재 구현에서는 순수 decode-only가 아니다.
 실제 의미상 `generate_extra_peak_over_prefill_mb`를 우선 읽는다.

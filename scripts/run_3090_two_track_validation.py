@@ -292,6 +292,17 @@ def _adapter_execution_mode(config: dict[str, Any], selected_adapter_id: str | N
     return str(config.get("adapter_bank", {}).get("execution_mode") or "proxy_card_accounting")
 
 
+def _actual_adapter_runtime(
+    *,
+    real_probe: Qwen3VLRealProbe | None,
+    adapter_execution_mode: str,
+    selected_adapter_id: str | None,
+) -> dict[str, Any] | None:
+    if not real_probe or not selected_adapter_id or adapter_execution_mode != "actual_peft":
+        return None
+    return real_probe.adapter_runtime
+
+
 def _specialist_baseline_config(config: dict[str, Any]) -> dict[str, Any]:
     return dict(config.get("model_residency_axis", {}).get("M1_multi_specialist_baseline", {}))
 
@@ -330,6 +341,7 @@ def _source_semantics(
     actual_image_execution: bool,
     task_score_source: str,
     adapter_execution_mode: str,
+    adapter_memory_source: str,
     actual_task_score_available: bool,
 ) -> dict[str, Any]:
     real_fields = []
@@ -363,8 +375,9 @@ def _source_semantics(
                 "generate_extra_peak_over_prefill_mb",
             ]
         )
-    if adapter_execution_mode in {"actual_peft", "merged_lora"}:
+    if adapter_execution_mode in {"actual_peft", "merged_lora"} and adapter_memory_source == "actual_loaded_adapter":
         real_fields.append("adapter_execution_mode")
+        real_fields.append("adapter_memory_source")
         proxy_fields = [field for field in proxy_fields if field not in {"adapter_bank_resident_mb", "active_adapter_resident_mb"}]
     if actual_task_score_available:
         real_fields.append("task_score")
@@ -418,6 +431,17 @@ def _trace_for_cell(
     bank_mb = adapter_bank_resident_mb(adapter_cards) if uses_lora_bank else 0.0
     active_mb = active_adapter_resident_mb(adapter_cards, selected_adapter_id) if selected_adapter_id else 0.0
     lora_switch_ms = lora_switch_latency_ms(adapter_cards, selected_adapter_id) if selected_adapter_id else None
+    actual_adapter = _actual_adapter_runtime(
+        real_probe=real_probe,
+        adapter_execution_mode=adapter_execution_mode,
+        selected_adapter_id=selected_adapter_id,
+    )
+    adapter_memory_source = "adapter_card_estimate"
+    if actual_adapter:
+        adapter_memory_source = "actual_loaded_adapter"
+        active_mb = float(actual_adapter.get("peft_allocated_delta_mb") or 0.0)
+        bank_mb = active_mb if uses_lora_bank else 0.0
+        lora_switch_ms = float(actual_adapter.get("peft_attach_latency_ms") or 0.0)
     real_measurement_cache = real_measurement_cache if real_measurement_cache is not None else {}
     image_paths_override = None
     manifest_evidence: dict[str, Any] | None = None
@@ -583,6 +607,7 @@ def _trace_for_cell(
         actual_image_execution=actual_image_execution,
         task_score_source=task_score_source,
         adapter_execution_mode=adapter_execution_mode,
+        adapter_memory_source=adapter_memory_source,
         actual_task_score_available=actual_task_score_available,
     )
     return {
@@ -610,6 +635,8 @@ def _trace_for_cell(
             "model_swap_latency_ms": model_swap_ms,
             "lora_switch_latency_ms": lora_switch_ms,
             "adapter_execution_mode": adapter_execution_mode,
+            "adapter_memory_source": adapter_memory_source,
+            "actual_adapter_runtime": actual_adapter,
             "resident_estimate_method": specialist_baseline.get(
                 "resident_estimate_method",
                 "same_backbone_after_load_times_count",
@@ -639,6 +666,9 @@ def _trace_for_cell(
             "mode_switch_latency_ms": mode_switch_ms,
             "lora_switch_latency_ms": lora_switch_ms,
             "adapter_bank_resident_mb": bank_mb,
+            "active_adapter_resident_mb": active_mb,
+            "adapter_memory_source": adapter_memory_source,
+            "actual_adapter_runtime": actual_adapter,
             "active_adapter_count": 1 if selected_adapter_id else 0,
             "resident_estimate_method": specialist_baseline.get(
                 "resident_estimate_method",
@@ -673,7 +703,7 @@ def _trace_for_cell(
             "memory_source": measurement_source,
             "visual_token_source": visual.get("visual_token_count_source"),
             "quality_source": task_score_source,
-            "adapter_memory_source": "adapter_card_estimate",
+            "adapter_memory_source": adapter_memory_source,
             "adapter_execution_mode": adapter_execution_mode,
             "roi_source": roi_source,
             "data_mode": data_mode,
@@ -887,8 +917,8 @@ def _combined_result(
             "visual_token_source": next((t.get("source", {}).get("visual_token_source") for t in traces), None),
             "quality_source": _label_set(source.get("task_score_source") for source in sources),
             "task_score_source": _label_set(source.get("task_score_source") for source in sources),
-            "adapter_memory_source": "adapter_card_estimate",
-            "adapter_execution_mode": config.get("adapter_bank", {}).get("execution_mode", "proxy_card_accounting"),
+            "adapter_memory_source": _label_set(source.get("adapter_memory_source") for source in sources),
+            "adapter_execution_mode": _label_set(source.get("adapter_execution_mode") for source in sources),
             "data_mode": _data_mode(config),
             "image_sources": image_sources,
             "roi_sources": roi_sources,
@@ -1021,7 +1051,15 @@ def main() -> int:
     parser.add_argument("--manifest", help="JSONL manifest for stage1_smoke_manifest or real_task_manifest mode.")
     parser.add_argument(
         "--roi-source",
-        choices=["center_crop", "oracle_box", "ocr_box_or_layout_box", "layout_box"],
+        choices=[
+            "center_crop",
+            "oracle_box",
+            "layout_proxy_box",
+            "detector_proxy_box",
+            "ocr_detector_box",
+            "ocr_box_or_layout_box",
+            "layout_box",
+        ],
         help="Override the non-oracle ROI source for manifest image preparation.",
     )
     parser.add_argument("--max-new-tokens", type=int, default=4, help="Decode tokens used by the real CUDA probe.")
@@ -1097,6 +1135,7 @@ def main() -> int:
                 dtype_name=str(config.get("model", {}).get("dtype", "float16")),
                 run_dir=run_dir,
                 max_new_tokens=args.max_new_tokens,
+                adapter_bank_config=dict(config.get("adapter_bank", {})),
             )
             real_probe_load = real_probe.load_result.to_dict()
             after_load = record_after_model_load(
@@ -1149,6 +1188,7 @@ def main() -> int:
         "claim_boundary": config.get("claim_boundary", {}),
         "scientific_status": "3090_two_track_dry_run_scaffold" if dry_run else "3090_two_track_real_cuda_accounting",
         "real_probe_load": real_probe_load,
+        "real_probe_adapter_runtime": real_probe.adapter_runtime if real_probe else None,
     }
     write_json(run_dir / "run_manifest.json", manifest)
 
@@ -1211,7 +1251,8 @@ def main() -> int:
             ensure_ascii=False,
         )
     )
-    return 0 if gates["completion_gate"] and gates["measurement_gate"] else 2
+    allow_incomplete_matrix = bool(config.get("run", {}).get("allow_incomplete_matrix", False))
+    return 0 if gates["measurement_gate"] and (gates["completion_gate"] or allow_incomplete_matrix) else 2
 
 
 if __name__ == "__main__":

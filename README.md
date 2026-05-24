@@ -30,8 +30,11 @@ Track B. FoveateR-style visual evidence compression
 - result briefs: `docs/20_results/`
 - 3090 pilot config: `configs/3090/two_track_pilot.yaml`
 - 3090 tiny scored config: `configs/3090/tiny_scored_validation.yaml`
+- 3090 OCR detector config: `configs/3090/tiny_scored_ocr_detector.yaml`
+- 3090 actual PEFT matrix smoke config: `configs/3090/tiny_scored_actual_peft_matrix_smoke.yaml`
 - 3090 adapter cards: `configs/3090/adapter_cards.yaml`
 - 3090 result schemas: `schemas/3090/residency_trace.example.yaml`, `schemas/3090/combined_validation_result.example.yaml`
+- paper notes: `docs/30_paper_notes/`
 
 ## 경로 구조
 
@@ -88,7 +91,15 @@ Tiny scored ROI source comparison:
 .venv\Scripts\python.exe scripts\prepare_tiny_scored_manifest.py --max-samples 20
 .venv\Scripts\python.exe scripts\run_3090_two_track_validation.py --config configs\3090\tiny_scored_validation.yaml --real-run --max-samples 16 --roi-source center_crop --max-new-tokens 8
 .venv\Scripts\python.exe scripts\run_3090_two_track_validation.py --config configs\3090\tiny_scored_validation.yaml --real-run --max-samples 16 --roi-source oracle_box --max-new-tokens 8
-.venv\Scripts\python.exe scripts\run_3090_two_track_validation.py --config configs\3090\tiny_scored_validation.yaml --real-run --max-samples 16 --roi-source ocr_box_or_layout_box --max-new-tokens 8
+.venv\Scripts\python.exe scripts\run_3090_two_track_validation.py --config configs\3090\tiny_scored_validation.yaml --real-run --max-samples 16 --roi-source layout_proxy_box --max-new-tokens 8
+```
+
+Optional OCR detector ROI manifest:
+
+```powershell
+.venv\Scripts\python.exe -m pip install -r requirements-ocr.txt
+.venv\Scripts\python.exe scripts\prepare_ocr_detector_manifest.py --input .local\data\tiny_scored_manifest\manifest.jsonl --output .local\data\tiny_scored_manifest\manifest_ocr_detector.jsonl
+.venv\Scripts\python.exe scripts\run_3090_two_track_validation.py --config configs\3090\tiny_scored_ocr_detector.yaml --real-run --max-samples 16 --max-new-tokens 8
 ```
 
 Sequential specialist swap와 actual PEFT attach smoke:
@@ -96,6 +107,13 @@ Sequential specialist swap와 actual PEFT attach smoke:
 ```powershell
 .venv\Scripts\python.exe scripts\run_specialist_swap_smoke.py --config configs\3090\tiny_scored_validation.yaml --repeats 3
 .venv\Scripts\python.exe scripts\run_actual_peft_smoke.py --config configs\3090\tiny_scored_validation.yaml --rank 4 --alpha 8
+.venv\Scripts\python.exe scripts\run_3090_two_track_validation.py --config configs\3090\tiny_scored_actual_peft_matrix_smoke.yaml --real-run --max-samples 4 --max-new-tokens 8
+```
+
+ROI source stability plan:
+
+```powershell
+.venv\Scripts\python.exe scripts\run_roi_source_stability.py --max-samples 32 --repeats 3
 ```
 
 주요 산출물은 실행별 `.local/runs/<run_id>/combined_validation_result.json`, `summary.csv`, `route_traces.jsonl`, `result_summary_ko.md`, `short_paper_ko.md`에 기록됩니다. `.local/runs/`, `.local/data/`, `.local/hf_cache/`는 로컬 전용이며 Git에는 result brief와 재현 명령만 남깁니다. 자세한 기준은 `docs/00_overview/local_artifact_boundary_ko.md`를 봅니다.

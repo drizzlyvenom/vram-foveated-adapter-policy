@@ -1,0 +1,4 @@
+pytesseract>=0.3.10
+
+# This Python package still requires the external Tesseract OCR binary.
+# Windows users can install it separately and make sure `tesseract` is on PATH.

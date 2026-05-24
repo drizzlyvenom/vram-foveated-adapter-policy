@@ -129,6 +129,8 @@ def _make_image(task: dict[str, Any], image_path: Path) -> dict[str, Any]:
         "target_box_rel_xyxy": _rel_box(box),
         "oracle_roi_box_rel_xyxy": _rel_box(oracle_box),
         "layout_roi_box_rel_xyxy": _rel_box(layout_box),
+        "layout_proxy_roi_box_rel_xyxy": _rel_box(layout_box),
+        "detector_proxy_roi_box_rel_xyxy": _rel_box(layout_box),
         "ocr_roi_box_rel_xyxy": _rel_box(layout_box),
         "center_crop_roi_box_rel_xyxy": CENTER_CROP_REL,
     }
@@ -160,6 +162,12 @@ def main() -> int:
             "roi_source": "center_crop",
             "roi_box_rel_xyxy": boxes["center_crop_roi_box_rel_xyxy"],
             "source_dataset": "VFA tiny scored controlled image set v0",
+            "roi_source_semantics": {
+                "oracle_box": "target-aware upper-bound box",
+                "layout_proxy_box": "controlled layout/target-aware proxy box; not external OCR",
+                "detector_proxy_box": "controlled detector-like proxy box; not external OCR",
+                "ocr_detector_box": "reserved for optional external OCR detector output",
+            },
             "source_url": None,
             **boxes,
         }

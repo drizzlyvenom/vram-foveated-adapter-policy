@@ -63,6 +63,7 @@ latest_scored_roi_validation:
     center_crop: "20260524T090102Z-3090_tiny_scored_validation"
     oracle_box: "20260524T090206Z-3090_tiny_scored_validation"
     ocr_box_or_layout_box: "20260524T090316Z-3090_tiny_scored_validation"
+  roi_source_naming_note: "ocr_box_or_layout_box is a legacy controlled layout proxy name, not an external OCR detector."
   c4_center_crop_score: 0.3125
   c4_oracle_box_score: 0.9375
   c4_ocr_layout_score: 0.9375
@@ -114,6 +115,7 @@ real_measurement:
   - normalized_answer_match task score in tiny_scored_manifest runs
   - sequential specialist proxy load/unload latency in run_specialist_swap_smoke.py
   - actual PEFT attach memory delta and forward path in run_actual_peft_smoke.py
+  - actual PEFT attach memory delta in C3/C4 matrix smoke only when adapter_memory_source=actual_loaded_adapter
 
 estimate_or_proxy:
   - adapter_bank_resident_mb from adapter cards
@@ -122,6 +124,7 @@ estimate_or_proxy:
   - task_score in synthetic_proxy or real_task_manifest smoke runs without expected_answers
   - verifier_score
   - roi quality and roi recall under center_crop or synthetic_probe mode
+  - layout_proxy_box and detector_proxy_box until an external detector writes ocr_detector_box fields
   - generate_extra_peak_over_prefill_mb as generate-minus-prefill proxy
 ```
 
@@ -131,7 +134,7 @@ estimate_or_proxy:
 
 ```yaml
 next_promotion_steps:
-  - replace layout_box proxy with actual OCR/layout detector ROI
+  - replace layout_proxy_box with actual OCR detector ROI via manifest_ocr_detector.jsonl
   - replace controlled tiny scored images with external benchmark or human-evaluated task set
   - evaluate trained LoRA weights, not random PEFT attach
   - measure LoRA bank switch latency across multiple actual adapters

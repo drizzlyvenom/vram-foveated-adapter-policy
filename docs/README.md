@@ -7,6 +7,7 @@ docs/
   00_overview/   프로젝트 상태, claim boundary, 로컬 산출물 경계
   10_protocols/ 검증 ladder, metric contract, decision gate
   20_results/   raw runs 대신 커밋하는 결과 브리프
+  30_paper_notes/ 소논문 outline, claim table, ablation/table plan
 ```
 
 현재 active 문서는 다음 경로를 기준으로 참조한다.
@@ -28,6 +29,12 @@ results:
   - docs/20_results/2026-05-24_reproducibility_source_semantics_closure_ko.md
   - docs/20_results/2026-05-24_metric_gate_semantics_closure_ko.md
   - docs/20_results/2026-05-24_scored_roi_swap_peft_validation_ko.md
+
+paper_notes:
+  - docs/30_paper_notes/README.md
+  - docs/30_paper_notes/paper_outline_ko.md
+  - docs/30_paper_notes/claim_table_ko.md
+  - docs/30_paper_notes/ablation_table_plan_ko.md
 ```
 
 원본 실행 산출물은 `.local/runs/`에 두고 Git에는 올리지 않는다. Git에는 재현 명령, 핵심 수치, gate 상태, source semantics, claim boundary를 담은 result brief만 남긴다.

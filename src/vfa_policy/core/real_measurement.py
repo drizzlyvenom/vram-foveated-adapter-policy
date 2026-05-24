@@ -70,6 +70,10 @@ def _dtype_from_name(torch_module: Any, dtype_name: str) -> Any:
     return torch_module.float16
 
 
+def _count_trainable_parameters(model: Any) -> int:
+    return int(sum(param.numel() for param in model.parameters() if param.requires_grad))
+
+
 def make_probe_images(output_dir: str | Path) -> dict[str, Path]:
     """Create deterministic local probe images for R0/R3 accounting."""
 
@@ -150,6 +154,7 @@ class Qwen3VLRealProbe:
         dtype_name: str = "float16",
         run_dir: str | Path,
         max_new_tokens: int = 4,
+        adapter_bank_config: dict[str, Any] | None = None,
     ) -> None:
         import torch
         from transformers import AutoModelForImageTextToText, AutoProcessor
@@ -163,6 +168,7 @@ class Qwen3VLRealProbe:
         self.measurement_source = "qwen3_vl_4b_local_cuda_prefill_generate"
         self.run_dir = Path(run_dir)
         self.image_bank = make_probe_images(self.run_dir)
+        self.adapter_runtime: dict[str, Any] | None = None
 
         model_path = Path(model_path)
         dtype = _dtype_from_name(torch, dtype_name)
@@ -194,6 +200,56 @@ class Qwen3VLRealProbe:
             model_load_latency_ms=round((time.perf_counter() - started) * 1000.0, 3),
             gpu_name=torch.cuda.get_device_name(0),
         )
+        self._maybe_attach_actual_peft(adapter_bank_config or {})
+
+    def _maybe_attach_actual_peft(self, adapter_bank_config: dict[str, Any]) -> None:
+        if str(adapter_bank_config.get("execution_mode") or "") != "actual_peft":
+            return
+        actual = dict(adapter_bank_config.get("actual_peft") or {})
+        target_modules = actual.get("target_modules") or adapter_bank_config.get("target_modules") or ["q_proj", "v_proj"]
+        if isinstance(target_modules, str):
+            target_modules = [item.strip() for item in target_modules.split(",") if item.strip()]
+        rank = int(actual.get("rank") or adapter_bank_config.get("rank") or 4)
+        alpha = int(actual.get("alpha") or adapter_bank_config.get("alpha") or 8)
+
+        try:
+            from peft import LoraConfig, get_peft_model
+        except ImportError as exc:
+            raise RuntimeError("adapter_bank.execution_mode=actual_peft requires peft from requirements.txt.") from exc
+
+        torch = self.torch
+        before_allocated = _cuda_allocated_mb(torch)
+        before_reserved = _cuda_reserved_mb(torch)
+        config = LoraConfig(
+            r=rank,
+            lora_alpha=alpha,
+            target_modules=list(target_modules),
+            lora_dropout=float(actual.get("dropout", 0.0)),
+            bias=str(actual.get("bias", "none")),
+            task_type=str(actual.get("task_type", "CAUSAL_LM")),
+        )
+        started = time.perf_counter()
+        self.model = get_peft_model(self.model, config)
+        self.model.eval()
+        _sync(torch)
+        after_allocated = _cuda_allocated_mb(torch)
+        after_reserved = _cuda_reserved_mb(torch)
+        self.adapter_runtime = {
+            "adapter_execution_mode": "actual_peft",
+            "adapter_memory_source": "actual_loaded_adapter",
+            "uses_random_untrained_adapter": bool(actual.get("uses_random_untrained_adapter", True)),
+            "rank": rank,
+            "alpha": alpha,
+            "target_modules": list(target_modules),
+            "peft_attach_latency_ms": round((time.perf_counter() - started) * 1000.0, 3),
+            "peft_allocated_delta_mb": round(after_allocated - before_allocated, 3),
+            "peft_reserved_delta_mb": round(after_reserved - before_reserved, 3),
+            "after_peft_attach_allocated_mb": after_allocated,
+            "after_peft_attach_reserved_mb": after_reserved,
+            "trainable_lora_parameters": _count_trainable_parameters(self.model),
+            "task_accuracy_claim": False,
+            "trained_lora_gain_claim": False,
+        }
 
     def _messages(self, image_paths: list[Path], prompt: str) -> list[dict[str, Any]]:
         content = [{"type": "image", "image": str(path)} for path in image_paths]

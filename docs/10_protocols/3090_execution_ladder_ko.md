@@ -20,12 +20,16 @@ M-A 이후의 검증은 proxy를 실제 측정으로 교체하는 순서로 닫�
 
 ```yaml
 M-B_ROI_source_comparison:
-  goal: center_crop, oracle_box, ocr_box_or_layout_box를 같은 tiny scored manifest에서 비교
+  goal: center_crop, oracle_box, layout_proxy_box, optional ocr_detector_box를 같은 tiny scored manifest에서 비교
   required:
     - actual_image_execution: true
     - task_score_source: normalized_answer_match
     - roi_contains_target_evidence
     - visual_token_count / prefill_latency / normal_path_peak
+  naming:
+    - ocr_box_or_layout_box는 legacy alias이며 실제 OCR detector output으로 해석하지 않는다.
+    - layout_proxy_box는 controlled proxy다.
+    - ocr_detector_box는 scripts/prepare_ocr_detector_manifest.py가 detector box를 기록한 manifest에서만 사용한다.
 
 M-C_tiny_scored_task_validation:
   goal: synthetic_proxy task_score를 실제 모델 답변의 normalized answer match로 교체
@@ -43,16 +47,18 @@ M-D_sequential_specialist_swap:
     - residual_reserved_mb
 
 M-E_actual_peft_smoke:
-  goal: proxy_card_accounting과 별개로 실제 PEFT LoRA attach path의 memory/latency 측정
+  goal: proxy_card_accounting과 별개로 실제 PEFT LoRA attach path의 memory/latency 측정, 이후 C3/C4 matrix smoke에 반영
   required:
     - adapter_execution_mode: actual_peft
     - adapter_memory_source: actual_loaded_adapter
     - peft_allocated_delta_mb
     - peft_attach_latency_ms
+    - trained_lora_gain_claim: false
 
 M-F_repeated_pilot:
-  goal: n=16 이상 반복 측정으로 mean뿐 아니라 p95를 보고
+  goal: n=16 이상 또는 repeats=3 반복 측정으로 mean, std, p95를 보고
   required:
+    - task_score_std
     - visual_token_count_p95
     - normal_path_peak_mb_p95
     - visual_incremental_peak_mb_p95

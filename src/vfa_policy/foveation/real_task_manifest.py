@@ -8,16 +8,25 @@ from PIL import Image
 
 
 CENTER_CROP_REL_XYXY = [0.15, 0.15, 0.85, 0.85]
+DETECTOR_REQUIRED_SOURCES = {"ocr_detector_box"}
 ROI_SOURCE_ALIASES = {
     "center": "center_crop",
     "center_crop": "center_crop",
     "oracle": "oracle_box",
     "oracle_box": "oracle_box",
-    "ocr": "ocr_box_or_layout_box",
-    "ocr_box": "ocr_box_or_layout_box",
-    "layout": "ocr_box_or_layout_box",
-    "layout_box": "ocr_box_or_layout_box",
-    "ocr_box_or_layout_box": "ocr_box_or_layout_box",
+    "layout": "layout_proxy_box",
+    "layout_box": "layout_proxy_box",
+    "layout_proxy": "layout_proxy_box",
+    "layout_proxy_box": "layout_proxy_box",
+    "detector_proxy": "detector_proxy_box",
+    "detector_proxy_box": "detector_proxy_box",
+    "ocr_detector": "ocr_detector_box",
+    "ocr_detector_box": "ocr_detector_box",
+    # Backward-compatible names from the first tiny scored pass. These are not
+    # external OCR detector outputs; they resolve to the controlled layout proxy.
+    "ocr": "layout_proxy_box",
+    "ocr_box": "layout_proxy_box",
+    "ocr_box_or_layout_box": "layout_proxy_box",
 }
 
 
@@ -97,6 +106,20 @@ def _normalize_roi_source(value: Any) -> str:
 
 
 def _box_candidates(sample: dict[str, Any]) -> dict[str, tuple[Any, Any]]:
+    layout_proxy_rel = (
+        sample.get("layout_proxy_roi_box_rel_xyxy")
+        or sample.get("detector_proxy_roi_box_rel_xyxy")
+        or sample.get("layout_roi_box_rel_xyxy")
+        or sample.get("ocr_roi_box_rel_xyxy")
+    )
+    layout_proxy_abs = (
+        sample.get("layout_proxy_roi_box_xyxy")
+        or sample.get("detector_proxy_roi_box_xyxy")
+        or sample.get("layout_roi_box_xyxy")
+        or sample.get("ocr_roi_box_xyxy")
+    )
+    detector_proxy_rel = sample.get("detector_proxy_roi_box_rel_xyxy") or layout_proxy_rel
+    detector_proxy_abs = sample.get("detector_proxy_roi_box_xyxy") or layout_proxy_abs
     return {
         "center_crop": (
             sample.get("center_crop_roi_box_rel_xyxy") or sample.get("center_roi_box_rel_xyxy"),
@@ -106,13 +129,15 @@ def _box_candidates(sample: dict[str, Any]) -> dict[str, tuple[Any, Any]]:
             sample.get("oracle_roi_box_rel_xyxy") or sample.get("target_box_rel_xyxy"),
             sample.get("oracle_roi_box_xyxy") or sample.get("target_box_xyxy"),
         ),
+        "layout_proxy_box": (layout_proxy_rel, layout_proxy_abs),
+        "detector_proxy_box": (detector_proxy_rel, detector_proxy_abs),
+        "ocr_detector_box": (
+            sample.get("ocr_detector_roi_box_rel_xyxy"),
+            sample.get("ocr_detector_roi_box_xyxy"),
+        ),
         "ocr_box_or_layout_box": (
-            sample.get("ocr_roi_box_rel_xyxy")
-            or sample.get("layout_roi_box_rel_xyxy")
-            or sample.get("oracle_roi_box_rel_xyxy"),
-            sample.get("ocr_roi_box_xyxy")
-            or sample.get("layout_roi_box_xyxy")
-            or sample.get("oracle_roi_box_xyxy"),
+            layout_proxy_rel or sample.get("oracle_roi_box_rel_xyxy"),
+            layout_proxy_abs or sample.get("oracle_roi_box_xyxy"),
         ),
         "default": (
             sample.get("roi_box_rel_xyxy") or sample.get("oracle_roi_box_rel_xyxy"),
@@ -144,6 +169,12 @@ def _box_from_sample(
         roi_source = _normalize_roi_source(roi_source_override or sample.get("roi_source") or "center_crop")
     candidates = _box_candidates(sample)
     rel_box, abs_box = candidates.get(roi_source, candidates["default"])
+    if roi_source in DETECTOR_REQUIRED_SOURCES and not rel_box and not abs_box:
+        sample_id = sample.get("sample_id") or "unknown"
+        raise ValueError(
+            f"ROI source {roi_source} requires detector boxes in manifest sample {sample_id}. "
+            "Run scripts/prepare_ocr_detector_manifest.py first or choose layout_proxy_box."
+        )
     if rel_box:
         box = _box_from_rel(rel_box, width, height)
     elif abs_box:

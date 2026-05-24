@@ -67,6 +67,8 @@ actual_peft_run: "20260524T090446Z-actual_peft_smoke"
 
 아래 점수는 synthetic proxy가 아니라 Qwen3-VL-4B가 생성한 답변을 `expected_answers`와 normalized exact/contains match로 채점한 값이다. 단, 데이터셋은 큰 공개 benchmark가 아니라 로컬에서 생성한 controlled tiny scored image set이다.
 
+이 run의 `ocr_box_or_layout_box` 이름은 과거 호환 이름이다. 실제 외부 OCR detector output이 아니라 controlled layout/target-aware proxy에 가깝고, 새 run에서는 같은 의미를 `layout_proxy_box`로 표기한다. 실제 detector output은 `ocr_detector_box`로 따로 기록한다.
+
 | ROI source | C4 foveated score | C4 target-evidence hit | C4 visual tokens | C4 normal peak MB mean | C4 normal peak MB p95 | C5 oracle score | C6 low-res score |
 |---|---:|---:|---:|---:|---:|---:|---:|
 | center_crop | 0.3125 | 0.1875 | 296.0 | 8684.136 | 8684.136 | 0.9375 | 0.1250 |
@@ -97,12 +99,12 @@ C4_token_reduction_vs_C3:
 ```yaml
 safe:
   - "동일한 visual token budget에서 ROI source가 target evidence를 포함하는지 여부가 actual task score를 크게 바꾼다."
-  - "oracle_box와 ocr_box_or_layout_box는 이 controlled tiny set에서 full-image score를 유지하면서 visual tokens를 768에서 296으로 줄였다."
+  - "oracle_box와 legacy ocr_box_or_layout_box(layout proxy)는 이 controlled tiny set에서 full-image score를 유지하면서 visual tokens를 768에서 296으로 줄였다."
   - "low-res only는 visual token은 100으로 가장 낮지만 score가 0.125로 떨어졌다."
 
 not_yet:
   - "일반 benchmark에서 같은 score retention이 유지된다."
-  - "ocr_box_or_layout_box가 실제 OCR detector로 검증됐다."
+  - "legacy ocr_box_or_layout_box(layout proxy)가 실제 OCR detector로 검증됐다."
   - "FoveateR learned policy가 oracle/layout ROI를 대체한다."
 ```
 
