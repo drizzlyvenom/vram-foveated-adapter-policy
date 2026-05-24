@@ -64,6 +64,59 @@ def _answer(sample: dict[str, Any]) -> str:
     return str(expected or "")
 
 
+def _split_samples(samples: list[dict[str, Any]], split_name: str | None) -> list[dict[str, Any]]:
+    if not split_name or split_name.lower() in {"all", "none"}:
+        return list(samples)
+    selected = [sample for sample in samples if str(sample.get("split") or "").lower() == split_name.lower()]
+    return selected
+
+
+def _limit_samples(samples: list[dict[str, Any]], limit: int | None) -> list[dict[str, Any]]:
+    if limit is None or int(limit) <= 0:
+        return list(samples)
+    return list(samples[: int(limit)])
+
+
+def _normalize_answer_text(value: Any) -> str:
+    import re
+
+    text = str(value or "").upper()
+    text = re.sub(r"[^A-Z0-9.+\\-]+", " ", text)
+    return " ".join(text.split())
+
+
+def _score_answer(sample: dict[str, Any], answer_text: str | None) -> dict[str, Any]:
+    expected = sample.get("expected_answers")
+    if expected is None and sample.get("expected_answer") is not None:
+        expected = [sample.get("expected_answer")]
+    if isinstance(expected, str):
+        expected = [expected]
+    expected_list = [str(item) for item in (expected or []) if item not in (None, "")]
+    if not expected_list or answer_text is None:
+        return {"score": None, "correct": None, "matched_expected_answer": None}
+
+    normalized_answer = _normalize_answer_text(answer_text)
+    answer_tokens = set(normalized_answer.split())
+    best_score = 0.0
+    matched = None
+    for expected_text in expected_list:
+        normalized_expected = _normalize_answer_text(expected_text)
+        if not normalized_expected:
+            continue
+        if normalized_expected in normalized_answer:
+            return {"score": 1.0, "correct": True, "matched_expected_answer": expected_text}
+        expected_tokens = set(normalized_expected.split())
+        if expected_tokens:
+            score = len(answer_tokens & expected_tokens) / len(expected_tokens)
+            if score > best_score:
+                best_score = score
+    return {
+        "score": round(float(best_score), 6),
+        "correct": bool(best_score >= 0.999),
+        "matched_expected_answer": matched,
+    }
+
+
 def _messages(image_paths: list[Path], prompt: str, answer: str | None = None) -> list[dict[str, Any]]:
     content = [{"type": "image", "image": str(path)} for path in image_paths]
     content.append({"type": "text", "text": prompt})
@@ -146,6 +199,93 @@ def _prepare_training_inputs(
     return inputs.to(device), mask_info
 
 
+def _prepare_eval_inputs(
+    processor: Any,
+    image_paths: list[Path],
+    prompt: str,
+    device: str,
+) -> Any:
+    from qwen_vl_utils import process_vision_info
+
+    messages = _messages(image_paths, prompt, None)
+    text = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+    image_inputs, video_inputs = process_vision_info(messages)
+    inputs = processor(
+        text=[text],
+        images=image_inputs,
+        videos=video_inputs,
+        padding=True,
+        return_tensors="pt",
+    )
+    return inputs.to(device)
+
+
+def _mean_score(rows: list[dict[str, Any]]) -> float | None:
+    values = [float(row["score"]) for row in rows if row.get("score") is not None]
+    if not values:
+        return None
+    return round(sum(values) / len(values), 6)
+
+
+def _evaluate_samples(
+    *,
+    model: Any,
+    processor: Any,
+    samples: list[dict[str, Any]],
+    visual_policy: str,
+    roi_source: str,
+    run_dir: Path,
+    max_new_tokens: int,
+    torch_module: Any,
+) -> dict[str, Any]:
+    rows: list[dict[str, Any]] = []
+    model.eval()
+    for sample_index, sample in enumerate(samples):
+        evidence = prepare_manifest_policy_evidence(
+            sample=sample,
+            sample_index=sample_index,
+            visual_policy=visual_policy,
+            run_dir=run_dir,
+            repo_root=REPO_ROOT,
+            roi_source_override=roi_source,
+        )
+        inputs = _prepare_eval_inputs(
+            processor,
+            evidence["image_paths"],
+            str(sample.get("prompt") or "Answer the image question."),
+            "cuda:0",
+        )
+        with torch_module.inference_mode():
+            generated = model.generate(
+                **inputs,
+                max_new_tokens=int(max_new_tokens),
+                do_sample=False,
+            )
+        _sync(torch_module)
+        answer_text = processor.batch_decode(generated, skip_special_tokens=True)[0]
+        scored = _score_answer(sample, answer_text)
+        rows.append(
+            {
+                "sample_id": sample.get("sample_id"),
+                "split": sample.get("split"),
+                "expected_answer": _answer(sample),
+                "answer_text": answer_text,
+                **scored,
+            }
+        )
+        del generated
+        del inputs
+        torch_module.cuda.empty_cache()
+    correct_values = [row.get("correct") for row in rows if row.get("correct") is not None]
+    return {
+        "samples": len(rows),
+        "score_mean": _mean_score(rows),
+        "correct_count": sum(1 for value in correct_values if bool(value)),
+        "available_count": len(correct_values),
+        "rows": rows,
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="configs/3090/tiny_scored_validation.yaml")
@@ -154,6 +294,12 @@ def main() -> int:
     parser.add_argument("--visual-policy", default="foveater_roi")
     parser.add_argument("--max-samples", type=int, default=4)
     parser.add_argument("--max-steps", type=int, default=4)
+    parser.add_argument("--train-split", default="train")
+    parser.add_argument("--holdout-split", default="holdout")
+    parser.add_argument("--eval-train-samples", type=int, default=32)
+    parser.add_argument("--eval-holdout-samples", type=int, default=32)
+    parser.add_argument("--eval-max-new-tokens", type=int, default=8)
+    parser.add_argument("--skip-eval", action="store_true")
     parser.add_argument("--rank", type=int, default=4)
     parser.add_argument("--alpha", type=int, default=8)
     parser.add_argument("--target-modules", default="q_proj,v_proj")
@@ -179,6 +325,15 @@ def main() -> int:
     config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
     model_path = resolve_repo_path(config.get("model", {}).get("local_snapshot_path", ""))
     manifest_samples = load_task_manifest(args.manifest, repo_root=REPO_ROOT)
+    train_pool = _split_samples(manifest_samples, str(args.train_split))
+    if not train_pool:
+        train_pool = list(manifest_samples)
+    holdout_pool = _split_samples(manifest_samples, str(args.holdout_split))
+    train_samples = _limit_samples(train_pool, int(args.max_samples))
+    if not train_samples:
+        raise RuntimeError("No train samples are available after split filtering.")
+    holdout_samples = _limit_samples(holdout_pool, int(args.eval_holdout_samples))
+    train_eval_samples = _limit_samples(train_pool, int(args.eval_train_samples))
     run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ-tiny_lora_train")
     run_dir = ensure_run_dir(run_id, ".local/runs")
     adapter_dir = resolve_repo_path(args.output_dir) / run_id
@@ -231,7 +386,7 @@ def main() -> int:
     mask_infos: list[dict[str, int | str]] = []
     torch.cuda.reset_peak_memory_stats()
     for step in range(int(args.max_steps)):
-        sample = sample_for_index(manifest_samples, step % int(args.max_samples))
+        sample = sample_for_index(train_samples, step)
         if sample is None:
             raise RuntimeError("No manifest sample available for training.")
         evidence = prepare_manifest_policy_evidence(
@@ -263,6 +418,35 @@ def main() -> int:
         torch.cuda.empty_cache()
 
     train_peak_allocated_mb = _mb(torch.cuda.max_memory_allocated())
+    evaluation: dict[str, Any] = {
+        "enabled": not bool(args.skip_eval),
+        "train_split": str(args.train_split),
+        "holdout_split": str(args.holdout_split),
+        "train_pool_samples": len(train_pool),
+        "holdout_pool_samples": len(holdout_pool),
+    }
+    if not args.skip_eval:
+        evaluation["train"] = _evaluate_samples(
+            model=model,
+            processor=processor,
+            samples=train_eval_samples,
+            visual_policy=str(args.visual_policy),
+            roi_source=str(args.roi_source),
+            run_dir=run_dir,
+            max_new_tokens=int(args.eval_max_new_tokens),
+            torch_module=torch,
+        )
+        evaluation["holdout"] = _evaluate_samples(
+            model=model,
+            processor=processor,
+            samples=holdout_samples,
+            visual_policy=str(args.visual_policy),
+            roi_source=str(args.roi_source),
+            run_dir=run_dir,
+            max_new_tokens=int(args.eval_max_new_tokens),
+            torch_module=torch,
+        )
+        model.train()
     adapter_dir.mkdir(parents=True, exist_ok=True)
     latest_dir.mkdir(parents=True, exist_ok=True)
     model.save_pretrained(adapter_dir)
@@ -294,6 +478,11 @@ def main() -> int:
         "roi_source": str(args.roi_source),
         "visual_policy": str(args.visual_policy),
         "max_samples": int(args.max_samples),
+        "manifest_sample_count": len(manifest_samples),
+        "train_split": str(args.train_split),
+        "holdout_split": str(args.holdout_split),
+        "train_sample_count": len(train_samples),
+        "holdout_sample_count": len(holdout_samples),
         "train_steps": int(args.max_steps),
         "rank": int(args.rank),
         "alpha": int(args.alpha),
@@ -326,10 +515,12 @@ def main() -> int:
         "losses": losses,
         "loss_first": losses[0] if losses else None,
         "loss_last": losses[-1] if losses else None,
+        "evaluation": evaluation,
         "claim_boundary": {
             "trained_adapter_saved": True,
             "tiny_controlled_training_smoke": True,
             "answer_only_label_mask": str(args.label_mask_mode) == "answer_only",
+            "train_holdout_evaluation_available": not bool(args.skip_eval),
             "benchmark_generalization_claim": False,
             "trained_lora_accuracy_gain_claim": False,
         },
@@ -344,11 +535,15 @@ def main() -> int:
                 f"- adapter_dir: `{result['adapter_dir']}`",
                 f"- latest_adapter_dir: `{result['latest_adapter_dir']}`",
                 f"- train_steps: `{result['train_steps']}`",
+                f"- train_sample_count: `{result['train_sample_count']}`",
+                f"- holdout_sample_count: `{result['holdout_sample_count']}`",
                 f"- trainable_lora_parameters: `{result['trainable_lora_parameters']}`",
                 f"- label_mask_mode: `{result['label_mask_mode']}`",
                 f"- supervised_token_count_mean: `{result['supervised_token_count_mean']}`",
                 f"- loss_first: `{result['loss_first']}`",
                 f"- loss_last: `{result['loss_last']}`",
+                f"- eval_train_score_mean: `{evaluation.get('train', {}).get('score_mean') if evaluation.get('train') else None}`",
+                f"- eval_holdout_score_mean: `{evaluation.get('holdout', {}).get('score_mean') if evaluation.get('holdout') else None}`",
                 f"- train_peak_allocated_mb: `{result['train_peak_allocated_mb']}`",
                 "",
                 "이 run은 controlled tiny set에서 adapter 학습/저장 경로를 닫는 smoke다.",

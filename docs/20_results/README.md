@@ -26,6 +26,8 @@ do_not_commit_by_default:
 
 | Date | Brief | Run | Status |
 |---|---|---|---|
+| 2026-05-24 | [64 unique stability / LoRA holdout / actual PEFT full C-matrix](2026-05-24_unique64_stability_lora_peft_ko.md) | `20260524T114337Z`, `20260524T114456Z`, `roi_stability_64_repeats3_plan` | 64 unique + repeats=3 controlled diagnostic |
+| 2026-05-24 | [P1 answer mask / OCR stability](2026-05-24_p1_answer_mask_ocr_stability_ko.md) | `20260524T105236Z`, `20260524T105933Z` | answer-only mask + n32 cyclic OCR smoke |
 | 2026-05-24 | [OCR detector / tiny trained LoRA smoke](2026-05-24_ocr_detector_trained_lora_smoke_ko.md) | `20260524T095934Z`, `20260524T095906Z` | detector + trained adapter smoke |
 | 2026-05-24 | [Scored ROI / swap / PEFT validation](2026-05-24_scored_roi_swap_peft_validation_ko.md) | `20260524T090102Z`, `20260524T090206Z`, `20260524T090316Z` | M-B~M-F initial measured pass |
 | 2026-05-24 | [Metric/gate semantics closure](2026-05-24_metric_gate_semantics_closure_ko.md) | `20260524T080046Z-3090_two_track_pilot` | metric/gate semantics closure |

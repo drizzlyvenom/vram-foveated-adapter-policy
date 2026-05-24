@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import subprocess
 import sys
@@ -45,6 +46,50 @@ def _write_plan(path: Path, payload: dict[str, Any]) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def _resolve(path_text: str | None) -> Path | None:
+    if not path_text:
+        return None
+    path = Path(path_text)
+    return path if path.is_absolute() else (REPO_ROOT / path)
+
+
+def _manifest_count(path_text: str | None) -> int | None:
+    path = _resolve(path_text)
+    if path is None or not path.exists():
+        return None
+    count = 0
+    with path.open("r", encoding="utf-8") as handle:
+        for line in handle:
+            if line.strip():
+                count += 1
+    return count
+
+
+def _last_json_line(output: str) -> dict[str, Any] | None:
+    for line in reversed(output.splitlines()):
+        line = line.strip()
+        if not line.startswith("{"):
+            continue
+        try:
+            return json.loads(line)
+        except json.JSONDecodeError:
+            continue
+    return None
+
+
+def _read_summary(run_dir_text: str | None) -> list[dict[str, Any]]:
+    if not run_dir_text:
+        return []
+    run_dir = Path(run_dir_text)
+    if not run_dir.is_absolute():
+        run_dir = REPO_ROOT / run_dir
+    summary_path = run_dir / "summary.csv"
+    if not summary_path.exists():
+        return []
+    with summary_path.open("r", encoding="utf-8", newline="") as handle:
+        return list(csv.DictReader(handle))
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="configs/3090/tiny_scored_validation.yaml")
@@ -67,6 +112,7 @@ def main() -> int:
         "created_at": datetime.now(timezone.utc).isoformat(),
         "config": args.config,
         "manifest_override": args.manifest,
+        "unique_manifest_samples": _manifest_count(args.manifest),
         "max_samples": int(args.max_samples),
         "repeats": int(args.repeats),
         "max_new_tokens": int(args.max_new_tokens),
@@ -87,6 +133,10 @@ def main() -> int:
         ],
         "claim_boundary": "This plan strengthens stability/oracle-gap evidence only; it is not production p95/p99 validation.",
     }
+    if payload["unique_manifest_samples"] is not None and int(args.max_samples) > int(payload["unique_manifest_samples"]):
+        payload["cyclic_sampling_warning"] = (
+            f"Requested max_samples={args.max_samples} exceeds unique manifest samples={payload['unique_manifest_samples']}."
+        )
 
     results = []
     if args.execute:
@@ -98,11 +148,15 @@ def main() -> int:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
             )
+            parsed = _last_json_line(completed.stdout)
+            run_dir_text = str(parsed.get("run_dir")) if parsed and parsed.get("run_dir") else None
             results.append(
                 {
                     "command": command,
                     "returncode": completed.returncode,
                     "output": completed.stdout,
+                    "run_dir": run_dir_text,
+                    "summary_rows": _read_summary(run_dir_text),
                 }
             )
             if completed.returncode != 0:

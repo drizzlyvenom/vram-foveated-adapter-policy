@@ -21,7 +21,7 @@ HEIGHT = 1200
 CENTER_CROP_REL = [0.25, 0.25, 0.75, 0.75]
 
 
-TASKS: list[dict[str, Any]] = [
+LEGACY_TASKS: list[dict[str, Any]] = [
     {"domain": "document_or_receipt", "taxonomy_label": "document", "sample_id": "doc_invoice_code_01", "answer": "A17K", "label": "INVOICE CODE", "xy": (1160, 110)},
     {"domain": "document_or_receipt", "taxonomy_label": "document", "sample_id": "doc_receipt_gate_02", "answer": "R82M", "label": "RECEIPT GATE", "xy": (90, 870)},
     {"domain": "document_or_receipt", "taxonomy_label": "document", "sample_id": "doc_workorder_ref_03", "answer": "W45Q", "label": "WORK ORDER", "xy": (1130, 850)},
@@ -43,6 +43,78 @@ TASKS: list[dict[str, Any]] = [
     {"domain": "chart_or_table", "taxonomy_label": "chart", "sample_id": "table_corner_key_04", "answer": "Z33A", "label": "CORNER KEY", "xy": (120, 120)},
     {"domain": "chart_or_table", "taxonomy_label": "chart", "sample_id": "chart_center_value_05", "answer": "V88D", "label": "CENTER VALUE", "xy": (620, 540)},
 ]
+
+
+DOMAIN_SPECS = [
+    ("document_or_receipt", "document", "DOC", "SERVICE DOCUMENT"),
+    ("scene_text_or_ocr", "scene_text", "SCN", "FIELD VIEW"),
+    ("ui_screen", "ui_screen", "UI", "CONTROL PANEL"),
+    ("chart_or_table", "chart", "CHT", "QUARTERLY TABLE"),
+]
+
+POSITION_SPECS = [
+    ("center", (650, 525), "center_crop_should_work"),
+    ("top_left", (120, 90), "center_crop_should_fail"),
+    ("top_right", (1130, 100), "center_crop_should_fail"),
+    ("bottom_left", (120, 850), "center_crop_should_fail"),
+    ("bottom_right", (1110, 820), "center_crop_should_fail"),
+    ("near_left_edge", (30, 500), "ocr_union_should_work"),
+    ("near_right_edge", (1230, 500), "ocr_union_should_work"),
+    ("near_top_edge", (650, 20), "ocr_union_should_work"),
+    ("near_bottom_edge", (650, 970), "ocr_union_should_work"),
+    ("upper_mid", (650, 180), "center_crop_should_work"),
+    ("lower_mid", (650, 780), "center_crop_should_work"),
+    ("mid_left", (230, 520), "center_crop_should_fail"),
+    ("mid_right", (1030, 520), "center_crop_should_fail"),
+    ("far_top_band", (420, 95), "ocr_union_too_large_or_distracted"),
+    ("far_bottom_band", (420, 885), "ocr_union_too_large_or_distracted"),
+    ("offset_center", (760, 430), "center_crop_should_work"),
+]
+
+DIFFICULTY_SPECS = [
+    ("large_text_no_distractor", 30, 0),
+    ("medium_text_few_distractors", 26, 2),
+    ("small_text_many_distractors", 22, 5),
+    ("medium_text_many_distractors", 25, 4),
+]
+
+
+def _generated_answer(domain_index: int, index: int) -> str:
+    number = 10 + ((domain_index * 17 + index * 7) % 90)
+    suffix = chr(ord("A") + ((domain_index * 5 + index * 3) % 26))
+    prefix = chr(ord("A") + domain_index)
+    return f"{prefix}{number:02d}{suffix}"
+
+
+def _build_controlled_tasks(samples_per_domain: int = 16) -> list[dict[str, Any]]:
+    tasks: list[dict[str, Any]] = []
+    for domain_index, (domain, taxonomy_label, short, label_prefix) in enumerate(DOMAIN_SPECS):
+        for index in range(samples_per_domain):
+            position_name, xy, failure_mode = POSITION_SPECS[index % len(POSITION_SPECS)]
+            difficulty, answer_font_size, distractor_count = DIFFICULTY_SPECS[index % len(DIFFICULTY_SPECS)]
+            split = "train" if index < samples_per_domain // 2 else "holdout"
+            answer = _generated_answer(domain_index, index)
+            tasks.append(
+                {
+                    "domain": domain,
+                    "taxonomy_label": taxonomy_label,
+                    "sample_id": f"{domain}_{position_name}_{index + 1:02d}",
+                    "answer": answer,
+                    "label": f"{label_prefix} CODE",
+                    "xy": xy,
+                    "split": split,
+                    "position": position_name,
+                    "difficulty": difficulty,
+                    "roi_failure_mode": failure_mode,
+                    "answer_font_size": answer_font_size,
+                    "distractor_count": distractor_count,
+                    "distractor_prefix": short,
+                }
+            )
+    return tasks
+
+
+TASKS = _build_controlled_tasks()
 
 
 def _font(size: int) -> ImageFont.ImageFont:
@@ -103,12 +175,39 @@ def _draw_background(draw: ImageDraw.ImageDraw, task: dict[str, Any], title_font
         draw.text((260, 120), "QUARTERLY TABLE", fill=(25, 55, 75), font=title_font)
 
 
+def _draw_distractors(
+    draw: ImageDraw.ImageDraw,
+    task: dict[str, Any],
+    *,
+    box: tuple[int, int, int, int],
+    small_font: ImageFont.ImageFont,
+) -> None:
+    count = int(task.get("distractor_count") or 0)
+    prefix = str(task.get("distractor_prefix") or "ALT")
+    if count <= 0:
+        return
+    candidates = [
+        (180, 300),
+        (760, 270),
+        (1160, 330),
+        (260, 690),
+        (870, 720),
+        (1220, 650),
+    ]
+    for idx, (x, y) in enumerate(candidates[:count]):
+        if not (box[2] < x or x + 180 < box[0] or box[3] < y or y + 68 < box[1]):
+            x = max(40, min(WIDTH - 220, x + 180))
+            y = max(40, min(HEIGHT - 120, y + 120))
+        draw.rounded_rectangle((x, y, x + 180, y + 68), radius=10, fill=(232, 236, 238), outline=(150, 160, 166), width=1)
+        draw.text((x + 18, y + 20), f"{prefix}-{idx + 1:02d}", fill=(95, 104, 110), font=small_font)
+
+
 def _make_image(task: dict[str, Any], image_path: Path) -> dict[str, Any]:
     image = Image.new("RGB", (WIDTH, HEIGHT), (242, 244, 246))
     draw = ImageDraw.Draw(image)
     title_font = _font(44)
     label_font = _font(32)
-    answer_font = _font(26)
+    answer_font = _font(int(task.get("answer_font_size") or 26))
     small_font = _font(24)
 
     _draw_background(draw, task, title_font, small_font)
@@ -119,6 +218,7 @@ def _make_image(task: dict[str, Any], image_path: Path) -> dict[str, Any]:
     draw.text((box[0] + 22, box[1] + 20), str(task["label"]), fill=(76, 55, 25), font=label_font)
     draw.text((box[0] + 28, box[1] + 104), str(task["answer"]), fill=(20, 30, 35), font=answer_font)
     draw.rectangle((box[0] - 14, box[1] - 14, box[2] + 14, box[3] + 14), outline=(214, 35, 35), width=5)
+    _draw_distractors(draw, task, box=box, small_font=small_font)
 
     image_path.parent.mkdir(parents=True, exist_ok=True)
     image.save(image_path, quality=95)
@@ -140,6 +240,12 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--output-dir", default=DEFAULT_TINY_SCORED_DIR)
     parser.add_argument("--max-samples", type=int, default=None)
+    parser.add_argument(
+        "--split-mode",
+        choices=["balanced_train_holdout", "none"],
+        default="balanced_train_holdout",
+        help="balanced_train_holdout writes 32 train + 32 holdout rows when max-samples is 64.",
+    )
     args = parser.parse_args()
 
     output_dir = (REPO_ROOT / args.output_dir).resolve()
@@ -158,10 +264,14 @@ def main() -> int:
             "prompt": "Read the highlighted evidence region. Answer only the four-character code.",
             "expected_answers": [task["answer"]],
             "answer_type": "label",
+            "split": task.get("split") if args.split_mode != "none" else None,
+            "position": task.get("position"),
+            "difficulty": task.get("difficulty"),
+            "roi_failure_mode": task.get("roi_failure_mode"),
             "full_image_path": str(image_path.relative_to(REPO_ROOT)).replace("\\", "/"),
             "roi_source": "center_crop",
             "roi_box_rel_xyxy": boxes["center_crop_roi_box_rel_xyxy"],
-            "source_dataset": "VFA tiny scored controlled image set v0",
+            "source_dataset": "VFA tiny scored controlled image set v1 unique64",
             "roi_source_semantics": {
                 "oracle_box": "target-aware upper-bound box",
                 "layout_proxy_box": "controlled layout/target-aware proxy box; not external OCR",

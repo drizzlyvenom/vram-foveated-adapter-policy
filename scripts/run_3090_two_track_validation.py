@@ -1172,6 +1172,13 @@ def main() -> int:
         shared_backbone_after_load_mb=after_load.allocated_mb,
         shared_plus_lora_resident_mb=shared_plus_lora_mb,
     )
+    max_samples = int(config.get("run", {}).get("max_samples", 20))
+    cyclic_sampling_warning = None
+    if manifest_samples and max_samples > len(manifest_samples):
+        cyclic_sampling_warning = (
+            f"Requested max_samples={max_samples} exceeds unique manifest samples={len(manifest_samples)}; "
+            "sample_for_index will cycle through the manifest."
+        )
 
     manifest = {
         "run_id": run_id,
@@ -1181,6 +1188,8 @@ def main() -> int:
         "dry_run": dry_run,
         "data": config.get("data", {}),
         "manifest_sample_count": len(manifest_samples),
+        "requested_max_samples": max_samples,
+        "cyclic_sampling_warning": cyclic_sampling_warning,
         "hardware": config.get("hardware", {}),
         "model": config.get("model", {}),
         "adapter_registry_path": str(adapter_registry.relative_to(REPO_ROOT)),
@@ -1194,7 +1203,6 @@ def main() -> int:
 
     traces: list[dict[str, Any]] = []
     real_measurement_cache: dict[tuple[str, int, str], RealVisualMeasurement] = {}
-    max_samples = int(config.get("run", {}).get("max_samples", 20))
     for cell in load_matrix_cells(config):
         for sample_index in range(max_samples):
             task_sample = sample_for_index(manifest_samples, sample_index)

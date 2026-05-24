@@ -25,6 +25,8 @@ protocols:
 
 results:
   - docs/20_results/README.md
+  - docs/20_results/2026-05-24_unique64_stability_lora_peft_ko.md
+  - docs/20_results/2026-05-24_p1_answer_mask_ocr_stability_ko.md
   - docs/20_results/2026-05-24_ocr_detector_trained_lora_smoke_ko.md
   - docs/20_results/2026-05-24_real_task_image_smoke_ko.md
   - docs/20_results/2026-05-24_reproducibility_source_semantics_closure_ko.md

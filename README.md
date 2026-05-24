@@ -31,7 +31,9 @@ Track B. FoveateR-style visual evidence compression
 - 3090 pilot config: `configs/3090/two_track_pilot.yaml`
 - 3090 tiny scored config: `configs/3090/tiny_scored_validation.yaml`
 - 3090 OCR detector config: `configs/3090/tiny_scored_ocr_detector.yaml`
+- 3090 ROI stability 64-sample config: `configs/3090/tiny_scored_roi_stability_64.yaml`
 - 3090 actual PEFT matrix smoke config: `configs/3090/tiny_scored_actual_peft_matrix_smoke.yaml`
+- 3090 trained LoRA full C-matrix config: `configs/3090/tiny_scored_trained_lora_full_cmatrix.yaml`
 - 3090 adapter cards: `configs/3090/adapter_cards.yaml`
 - 3090 result schemas: `schemas/3090/residency_trace.example.yaml`, `schemas/3090/combined_validation_result.example.yaml`
 - paper notes: `docs/30_paper_notes/`
@@ -88,7 +90,7 @@ python scripts\prepare_real_task_manifest.py --source picsum_highres --max-sampl
 Tiny scored ROI source comparison:
 
 ```powershell
-.venv\Scripts\python.exe scripts\prepare_tiny_scored_manifest.py --max-samples 20
+.venv\Scripts\python.exe scripts\prepare_tiny_scored_manifest.py --max-samples 64
 .venv\Scripts\python.exe scripts\run_3090_two_track_validation.py --config configs\3090\tiny_scored_validation.yaml --real-run --max-samples 16 --roi-source center_crop --max-new-tokens 8
 .venv\Scripts\python.exe scripts\run_3090_two_track_validation.py --config configs\3090\tiny_scored_validation.yaml --real-run --max-samples 16 --roi-source oracle_box --max-new-tokens 8
 .venv\Scripts\python.exe scripts\run_3090_two_track_validation.py --config configs\3090\tiny_scored_validation.yaml --real-run --max-samples 16 --roi-source layout_proxy_box --max-new-tokens 8
@@ -113,14 +115,14 @@ Sequential specialist swap와 actual PEFT attach smoke:
 Tiny trained LoRA smoke:
 
 ```powershell
-.venv\Scripts\python.exe scripts\train_tiny_lora_smoke.py --manifest .local\data\tiny_scored_manifest\manifest_ocr_detector.jsonl --roi-source ocr_detector_box --max-samples 4 --max-steps 4 --rank 4 --alpha 8 --learning-rate 1e-4 --label-mask-mode answer_only
-.venv\Scripts\python.exe scripts\run_3090_two_track_validation.py --config configs\3090\tiny_scored_trained_lora_matrix_smoke.yaml --real-run --max-samples 4 --max-new-tokens 8
+.venv\Scripts\python.exe scripts\train_tiny_lora_smoke.py --manifest .local\data\tiny_scored_manifest\manifest_ocr_detector.jsonl --roi-source ocr_detector_box --max-samples 32 --max-steps 32 --eval-train-samples 32 --eval-holdout-samples 32 --eval-max-new-tokens 8 --rank 4 --alpha 8 --learning-rate 1e-4 --label-mask-mode answer_only
+.venv\Scripts\python.exe scripts\run_3090_two_track_validation.py --config configs\3090\tiny_scored_trained_lora_full_cmatrix.yaml --real-run --max-samples 64 --max-new-tokens 8
 ```
 
 ROI source stability plan:
 
 ```powershell
-.venv\Scripts\python.exe scripts\run_roi_source_stability.py --max-samples 32 --repeats 3
+.venv\Scripts\python.exe scripts\run_roi_source_stability.py --config configs\3090\tiny_scored_roi_stability_64.yaml --manifest .local\data\tiny_scored_manifest\manifest_ocr_detector.jsonl --max-samples 64 --repeats 3 --max-new-tokens 8 --execute --output .local\runs\roi_stability_64_repeats3_plan.json
 ```
 
 주요 산출물은 실행별 `.local/runs/<run_id>/combined_validation_result.json`, `summary.csv`, `route_traces.jsonl`, `result_summary_ko.md`, `short_paper_ko.md`에 기록됩니다. `.local/runs/`, `.local/data/`, `.local/hf_cache/`는 로컬 전용이며 Git에는 result brief와 재현 명령만 남깁니다. 자세한 기준은 `docs/00_overview/local_artifact_boundary_ko.md`를 봅니다.

@@ -133,7 +133,7 @@ safe:
   - "controlled fallback conditional/all-sample peak fields가 summary에 채워졌다."
 
 not_yet:
-  - "32개 고유 샘플 또는 repeats=3 안정성이 끝났다."
+  - "이 P1 n=32 cyclic run 자체만으로는 32개 고유 샘플 또는 repeats=3 안정성이 끝났다고 보지 않는다."
   - "OCR detector ROI가 oracle을 안정적으로 대체한다."
   - "external benchmark에서도 같은 경향이 유지된다."
 ```

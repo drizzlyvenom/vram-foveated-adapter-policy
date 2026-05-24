@@ -1,0 +1,76 @@
+run:
+  name: "3090_tiny_scored_roi_stability_64"
+  output_dir: ".local/runs"
+  seed: 42
+  dry_run: false
+  max_samples: 64
+  allow_incomplete_matrix: true
+
+hardware:
+  target_gpu: "NVIDIA GeForce RTX 3090"
+  vram_budget_mb: 24576
+  normal_path_budget_mb: 22000
+
+model:
+  shared_backbone_id: "Qwen/Qwen3-VL-4B-Instruct"
+  dtype: "float16"
+  local_snapshot_path: ".local/hf_cache/hub/models--Qwen--Qwen3-VL-4B-Instruct/snapshots/ebb281ec70b05090aa6165b016eac8ec08e71b17"
+
+data:
+  mode: "tiny_scored_manifest"
+  manifest_path: ".local/data/tiny_scored_manifest/manifest_ocr_detector.jsonl"
+  roi_source: "ocr_detector_box"
+  real_task_validation_required_for_promotion: false
+
+model_residency_axis:
+  M0_shared_backbone_only:
+    enabled: true
+  M1_multi_specialist_baseline:
+    enabled: true
+    mode: "resident_estimate_and_sequential_swap"
+    resident_estimate_method: "same_backbone_after_load_times_count"
+    measured_sequential_swap_available: false
+    measured_joint_residency_available: false
+    specialist_models:
+      - id: "doc_specialist_proxy"
+      - id: "ocr_specialist_proxy"
+      - id: "ui_specialist_proxy"
+      - id: "chart_specialist_proxy"
+  M3_shared_backbone_taxonomy_lora:
+    enabled: true
+
+adapter_bank:
+  registry_path: "configs/3090/adapter_cards.yaml"
+  execution_mode: "proxy_card_accounting"
+  active_adapters_per_request: 1
+  routing_granularity: "request_or_roi_level"
+  allow_token_level_switching: false
+
+combined_matrix:
+  cells:
+    - id: "C0"
+      model: "M0_shared_backbone_only"
+      visual: "V0_full_fixed_image"
+    - id: "C3"
+      model: "M3_shared_backbone_taxonomy_lora"
+      visual: "V0_full_fixed_image"
+    - id: "C4"
+      model: "M3_shared_backbone_taxonomy_lora"
+      visual: "V2_foveater_roi"
+    - id: "C5"
+      model: "M3_shared_backbone_taxonomy_lora"
+      visual: "V3_oracle_roi"
+    - id: "C6"
+      model: "M3_shared_backbone_taxonomy_lora"
+      visual: "V1_low_res_only"
+    - id: "C7"
+      model: "M3_shared_backbone_taxonomy_lora"
+      visual: "V4_foveater_roi_controlled_fallback"
+
+claim_boundary:
+  allow_final_performance_claim: false
+  allow_trained_lora_gain_claim: false
+  allow_production_p99_claim: false
+  allow_feasibility_claim: true
+  roi_stability_repeats: 3
+  unique_manifest_target: 64
