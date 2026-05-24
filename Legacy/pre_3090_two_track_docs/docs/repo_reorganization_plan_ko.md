@@ -108,7 +108,15 @@ Core modules should focus on:
 
 ## 6. Config plan
 
-Add config skeletons:
+현재 3090 검증 pass의 canonical config/schema는 다음 파일을 우선한다.
+
+```text
+configs/3090_two_track_pilot.yaml
+schemas/3090_residency_trace.example.yaml
+schemas/3090_combined_validation_result.example.yaml
+```
+
+아래 분리형 config 이름은 추후 세분화 후보이며, 현재 구현 기준 파일명은 아니다.
 
 ```text
 configs/two_track_validation.yaml

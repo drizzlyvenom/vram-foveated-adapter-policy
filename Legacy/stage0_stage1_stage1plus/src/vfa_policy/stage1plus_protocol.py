@@ -1548,7 +1548,9 @@ def run_stage1plus_protocol(config_path_text: str, max_samples_override: int | N
 
     report = _build_report(run_id, run_dir, config, manifest, stage_rows, checks, jepa_metrics, closed_loop_rows, quarantine_rows)
     (run_dir / "stage1plus_closure_report_ko.md").write_text(report, encoding="utf-8")
-    (REPO_ROOT / "docs" / "stage1plus_closure_report_ko.md").write_text(report, encoding="utf-8")
+    exploratory_dir = REPO_ROOT / "docs" / "exploratory"
+    exploratory_dir.mkdir(parents=True, exist_ok=True)
+    (exploratory_dir / "stage1plus_protocol_closure_ko.md").write_text(report, encoding="utf-8")
 
     print(
         json.dumps(

@@ -28,14 +28,20 @@ output/presentation/text_review_render/
 # LaTeX/build scratch
 output/paper/build/
 output/paper/build_ko/
+Legacy/output/paper/build/
+Legacy/output/paper/build_ko/
 
 # Nested standalone experiment repository
 output/experiment/3090_pilot_costsim/
+Legacy/output/experiment/3090_pilot_costsim/
 
 # Local experiment outputs and downloaded datasets
 runs/
 data/
 hf_cache/
+Legacy/stage0_stage1_stage1plus/runs/
+Legacy/stage0_stage1_stage1plus/data/
+Legacy/local_workbench/
 
 # Raw handoff bundle copied into repo-ready docs/configs/schemas
 vfa_verification_guidelines/

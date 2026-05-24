@@ -1,0 +1,105 @@
+run:
+  name: "3090_two_track_pilot"
+  output_dir: "runs"
+  seed: 42
+  dry_run: true
+  max_samples: 20
+
+hardware:
+  target_gpu: "NVIDIA GeForce RTX 3090"
+  vram_budget_mb: 24576
+  normal_path_budget_mb: 22000
+
+model:
+  shared_backbone_id: "Qwen/Qwen3-VL-4B-Instruct"
+  dtype: "float16"
+  local_snapshot_path: "hf_cache/hub/models--Qwen--Qwen3-VL-4B-Instruct/snapshots/ebb281ec70b05090aa6165b016eac8ec08e71b17"
+
+model_residency_axis:
+  M0_shared_backbone_only:
+    enabled: true
+  M1_multi_specialist_baseline:
+    enabled: true
+    mode: "resident_estimate_and_sequential_swap"
+    specialist_models:
+      - id: "doc_specialist_proxy"
+      - id: "ocr_specialist_proxy"
+      - id: "ui_specialist_proxy"
+      - id: "chart_specialist_proxy"
+  M2_shared_backbone_oracle_lora:
+    enabled: true
+  M3_shared_backbone_taxonomy_lora:
+    enabled: true
+  M4_hydralora_estimate:
+    enabled: true
+
+visual_evidence_axis:
+  V0_full_fixed_image:
+    enabled: true
+    max_side: 1024
+  V1_low_res_only:
+    enabled: true
+    size_hw: [336, 336]
+  V2_foveater_roi:
+    enabled: true
+    global_hw: [336, 336]
+    roi_hw: [448, 448]
+    max_rois: 2
+  V3_oracle_roi:
+    enabled: true
+    roi_hw: [448, 448]
+    max_rois: 2
+  V4_foveater_roi_controlled_fallback:
+    enabled: true
+    max_fallback_tier: 1
+
+combined_matrix:
+  cells:
+    - id: "C0"
+      model: "M0_shared_backbone_only"
+      visual: "V0_full_fixed_image"
+    - id: "C1"
+      model: "M0_shared_backbone_only"
+      visual: "V2_foveater_roi"
+    - id: "C2"
+      model: "M2_shared_backbone_oracle_lora"
+      visual: "V0_full_fixed_image"
+    - id: "C3"
+      model: "M3_shared_backbone_taxonomy_lora"
+      visual: "V0_full_fixed_image"
+    - id: "C4"
+      model: "M3_shared_backbone_taxonomy_lora"
+      visual: "V2_foveater_roi"
+    - id: "C5"
+      model: "M3_shared_backbone_taxonomy_lora"
+      visual: "V3_oracle_roi"
+
+memory_accounting:
+  record_after_model_load: true
+  record_incremental_peak: true
+  separate_normal_and_fallback_peak: true
+  estimate_kv_cache_mb: true
+
+adapter_bank:
+  registry_path: "configs/stage1plus_adapter_cards.yaml"
+  active_adapters_per_request: 1
+  routing_granularity: "request_or_roi_level"
+  allow_token_level_switching: false
+
+fallback_tiers:
+  tier_0_in_budget:
+    - "second_roi"
+    - "larger_roi"
+    - "base_only_same_roi"
+  tier_1_controlled_expensive:
+    - "fullres_same_shared_backbone"
+    - "alternative_certified_lora"
+  tier_2_emergency:
+    - "full_specialist_model"
+    - "human_review"
+
+claim_boundary:
+  allow_final_performance_claim: false
+  allow_trained_lora_gain_claim: false
+  allow_production_p99_claim: false
+  allow_feasibility_claim: true

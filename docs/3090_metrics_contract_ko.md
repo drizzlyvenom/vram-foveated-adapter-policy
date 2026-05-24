@@ -1,0 +1,160 @@
+# RTX 3090 Metrics Contract
+
+Status: metric contract
+Purpose: RouteTrace와 summary가 반드시 남겨야 하는 필드를 정의한다.
+
+## 1. Memory breakdown
+
+단일 `peak_vram_mb`만 기록하지 않는다. 최소한 다음을 분리한다.
+
+```yaml
+memory:
+  base_after_load_allocated_mb: null
+  base_after_load_reserved_mb: null
+  adapter_bank_resident_mb: null
+  active_adapter_resident_mb: null
+  visual_incremental_peak_mb: null
+  decode_incremental_peak_mb: null
+  total_peak_mb: null
+  normal_path_peak_mb: null
+  controlled_fallback_peak_mb: null
+  emergency_fallback_peak_mb: null
+```
+
+## 2. Derived ratios
+
+```yaml
+derived:
+  base_resident_ratio: base_after_load_allocated_mb / total_peak_mb
+  resident_saving_vs_multi_specialist: 1 - shared_plus_lora_resident_mb / multi_specialist_resident_estimate_mb
+  visual_token_reduction_vs_full: 1 - foveated_visual_tokens / full_visual_tokens
+  incremental_visual_peak_reduction_vs_full: 1 - foveated_incremental_peak_mb / full_incremental_peak_mb
+```
+
+## 3. Visual evidence metrics
+
+```yaml
+visual:
+  visual_policy: full_image | low_res_only | foveater_roi | oracle_roi | foveater_roi_controlled_fallback
+  visual_token_count: null
+  global_token_count: null
+  roi_token_count: null
+  roi_count: null
+  roi_recall_at_1: null
+  roi_recall_at_k: null
+  roi_miss_rate: null
+  wrong_crop_distraction: null
+  kv_cache_estimate_mb: null
+  prefill_latency_ms: null
+```
+
+## 4. Model residency metrics
+
+```yaml
+residency:
+  model_residency_mode: shared_backbone | multi_specialist_estimate | sequential_specialist_swap
+  shared_backbone_after_load_mb: null
+  specialist_model_after_load_mb: null
+  multi_specialist_resident_estimate_mb: null
+  fits_in_24gb: null
+  model_load_latency_ms: null
+  model_swap_latency_ms: null
+  lora_switch_latency_ms: null
+  adapter_bank_resident_mb: null
+  active_adapter_count: null
+```
+
+## 5. Quality metrics
+
+```yaml
+quality:
+  task_score: null
+  answer_correct: null
+  score_retention_vs_oracle_lora: null
+  score_retention_vs_full_specialist: null
+  score_gain_vs_shared_backbone_only: null
+  verifier_score: null
+  verifier_pass: null
+  confidence: null
+  confidence_source: proxy_score_no_ground_truth | answer_match_proxy | model_logit | external_verifier | none
+```
+
+## 6. Routing and compatibility metrics
+
+```yaml
+routing:
+  router_type: none | oracle | taxonomy_card | taxonomy_cost | foveater_guided | future_jepa
+  selected_adapter_ids: []
+  selected_roi_id: null
+  top1_route_hit: null
+  top3_route_hit: null
+  abstained: false
+  wrong_route: false
+  wrong_adapter_damage: null
+  wrong_adapter_confidence_gain: null
+  adapter_conflict_rate: null
+  certified_bundle: null
+```
+
+## 7. Fallback tier metrics
+
+```yaml
+fallback:
+  fallback_tier: none | tier0_in_budget | tier1_controlled_expensive | tier2_emergency
+  fallback_evaluated: false
+  fallback_executed: false
+  fallback_success: false
+  terminal_reason: null
+  visited_actions: []
+```
+
+## 8. Failure labels
+
+Use these labels consistently.
+
+```yaml
+failure_types:
+  roi_miss: important ROI was not selected
+  wrong_crop_distraction: crop hurt answer quality
+  wrong_adapter_damage: wrong adapter reduced quality
+  wrong_adapter_confidence_gain: wrong adapter increased confidence while wrong
+  adapter_conflict: adapter bundle produced conflicting behavior
+  budget_violation: memory or latency budget exceeded
+  verifier_false_pass: verifier accepted bad evidence
+  verifier_false_reject: verifier rejected acceptable evidence
+  terminal_model_error: model failed even at fallback boundary
+  no_fallback_available: no distinct fallback exists
+  unresolved: failure is not attributable to route or adapter
+```
+
+`terminal_model_error`, `no_fallback_available`, and `unresolved` should usually produce `reject`, not `quarantine`.
+
+## 9. Summary CSV required columns
+
+```text
+run_id
+stage
+matrix_cell
+model_residency_mode
+visual_policy
+n_samples
+task_score_mean
+task_score_std
+normal_path_peak_mb_mean
+controlled_fallback_peak_mb_mean
+emergency_peak_mb_mean
+base_after_load_allocated_mb_mean
+adapter_bank_resident_mb_mean
+visual_incremental_peak_mb_mean
+visual_token_count_mean
+kv_cache_estimate_mb_mean
+prefill_latency_ms_p95
+mode_switch_latency_ms_p95
+lora_switch_latency_ms_p95
+fallback_tier0_rate
+fallback_tier1_rate
+fallback_tier2_rate
+wrong_adapter_damage_rate
+quarantine_count
+reject_count
+```

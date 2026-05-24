@@ -21,28 +21,15 @@ Track B. FoveateR-style visual evidence compression
 ## 현재 핵심 문서
 
 - Codex reframe guide: `CODEX_README.md`
-- Core plan: `docs/core_two_track_research_plan_ko.md`
-- Validation matrix: `docs/combined_validation_matrix_ko.md`
-- Memory accounting: `docs/resident_memory_accounting_protocol_ko.md`
-- Track A: `docs/shared_backbone_lora_consolidation_ko.md`
-- Track B: `docs/foveater_visual_evidence_compression_ko.md`
-- Compatibility certification: `docs/lora_compatibility_certification_ko.md`
-- Fallback budget tiers: `docs/fallback_budget_tiers_ko.md`
-- Claim boundary: `docs/claim_boundary_and_paper_positioning_ko.md`
-
-## 보조 및 탐색 문서
-
-```text
-docs/supporting/
-  stage1_foveation_smoke_closure_ko.md
-
-docs/exploratory/
-  stage1plus_protocol_closure_ko.md
-```
-
-Stage 1은 visual token / ROI cost accounting을 위한 supporting smoke evidence입니다.
-
-Stage 1+는 RouteTrace, adapter-card proxy wiring, LeWM/JEPA proxy, fallback/quarantine instrumentation이 한 계약 안에서 실행된다는 exploratory protocol closure입니다. Stage 1+를 trained LoRA 효과, JEPA runtime 우위, fallback recovery 성능의 최종 증거로 사용하지 않습니다.
+- 3090 validation goal: `CODEX_GOAL_3090_TWO_TRACK.md`
+- 3090 validation guideline: `docs/3090_two_track_validation_guideline_ko.md`
+- 3090 execution ladder: `docs/3090_execution_ladder_ko.md`
+- 3090 metrics contract: `docs/3090_metrics_contract_ko.md`
+- 3090 decision gates: `docs/3090_decision_gates_ko.md`
+- 3090 implementation plan: `docs/3090_codex_implementation_plan_ko.md`
+- 3090 pilot config: `configs/3090_two_track_pilot.yaml`
+- 3090 adapter cards: `configs/3090_adapter_cards.yaml`
+- 3090 result schemas: `schemas/3090_residency_trace.example.yaml`, `schemas/3090_combined_validation_result.example.yaml`
 
 ## Legacy 보관
 
@@ -51,27 +38,29 @@ Stage 1+는 RouteTrace, adapter-card proxy wiring, LeWM/JEPA proxy, fallback/qua
 ```text
 Legacy/docs/
 Legacy/output/
+Legacy/pre_3090_two_track_docs/
+Legacy/stage0_stage1_stage1plus/
 Legacy/source_bundles/vfa_two_track_docs/
+Legacy/source_bundles/vfa_3090_two_track_validation_docs/
 ```
 
-기존 발표 자료, 논문 초안 PDF/TeX, PPTX, 최종 대본 등 비마크다운 산출물은 `output/` 아래에 남아 있습니다.
+기존 Stage 0/1/1+ 스크립트, 설정, 스키마, closure 문서와 발표/논문 산출물은 active 구조에서 제외하고 `Legacy/` 아래에 보관합니다.
 
 ## 실행 참고
 
-Stage 0/1/1+ 실행 스크립트와 설정은 아직 repo에 남아 있으며, 현재는 supporting/exploratory evidence 재현용입니다.
+3090 투트랙 검증 dry-run scaffold:
 
 ```powershell
-python -m pip install -r requirements.txt
-python scripts\run_pilot.py --config configs\pilot_minimal.yaml
-python scripts\prepare_stage1_dataset.py --config configs\stage1_foveation_smoke.yaml
-python scripts\run_stage1_foveation.py --config configs\stage1_foveation_smoke.yaml
+python scripts\run_3090_two_track_validation.py --config configs\3090_two_track_pilot.yaml --dry-run
 ```
 
-Stage 1+ Qwen3-VL protocol pilot:
+RTX 3090 real CUDA memory-accounting smoke:
 
 ```powershell
-.\.venv\Scripts\python scripts\run_stage1plus_protocol.py --config configs\stage1plus_protocol.yaml
+.venv\Scripts\python.exe scripts\run_3090_two_track_validation.py --config configs\3090_two_track_pilot.yaml --real-run --max-samples 4 --max-new-tokens 4
 ```
+
+주요 산출물은 실행별 `runs/<run_id>/combined_validation_result.json`, `summary.csv`, `route_traces.jsonl`, `result_summary_ko.md`, `short_paper_ko.md`에 기록됩니다.
 
 ## Claim Rule
 

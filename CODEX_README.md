@@ -1,6 +1,6 @@
 # Codex Readme: Two-Track VRAM-Aware Vision Inference Reframe
 
-Status: repository reframe guide
+Status: active 3090 validation guide
 Audience: Codex or any implementation agent reading repository markdown only
 Primary repository: `drizzlyvenom/vram-foveated-adapter-policy`
 
@@ -10,15 +10,12 @@ Read these documents in order before modifying code:
 
 ```text
 1. CODEX_README.md
-2. docs/core_two_track_research_plan_ko.md
-3. docs/combined_validation_matrix_ko.md
-4. docs/resident_memory_accounting_protocol_ko.md
-5. docs/shared_backbone_lora_consolidation_ko.md
-6. docs/foveater_visual_evidence_compression_ko.md
-7. docs/lora_compatibility_certification_ko.md
-8. docs/fallback_budget_tiers_ko.md
-9. docs/repo_reorganization_plan_ko.md
-10. docs/claim_boundary_and_paper_positioning_ko.md
+2. CODEX_GOAL_3090_TWO_TRACK.md
+3. docs/3090_two_track_validation_guideline_ko.md
+4. docs/3090_execution_ladder_ko.md
+5. docs/3090_metrics_contract_ko.md
+6. docs/3090_decision_gates_ko.md
+7. docs/3090_codex_implementation_plan_ko.md
 ```
 
 ## 1. New core thesis
@@ -90,9 +87,10 @@ exploratory/future:
   - complex multi-step fallback loop
 ```
 
-## 3. Do not delete existing Stage 1 or Stage 1+ artifacts
+## 3. Treat Stage 1 and Stage 1+ as Legacy evidence
 
 Existing Stage 1 and Stage 1+ files are still valuable.
+They are preserved under `Legacy/stage0_stage1_stage1plus/` and should not be treated as the active runner path.
 
 Reclassify them as follows:
 
@@ -114,21 +112,21 @@ Do **not** use Stage 1+ as evidence that:
 - foveation alone substantially reduces full model resident VRAM
 ```
 
-## 4. Implementation priorities
+## 4. Implementation status and priorities
 
-### Priority 0: documentation reframe
+### Done
 
-Update README and docs so the repository clearly says:
-
-```text
-The core goal is low-VRAM vision inference through two complementary tracks:
-1. shared-backbone LoRA specialist consolidation
-2. FoveateR-style visual evidence compression
+```yaml
+done:
+  - active docs point to the 3090 two-track validation structure
+  - legacy Stage 0/1/1+ artifacts are archived under Legacy
+  - dry-run runner emits the required 3090 artifacts
+  - memory accounting separates resident, visual incremental, normal, controlled fallback, and emergency peaks
 ```
 
-### Priority 1: memory accounting
+### Next priority: R0 memory accounting
 
-Add exact fields and code hooks for:
+Attach real measurement to the existing dry-run fields:
 
 ```text
 base_after_load_allocated_mb
@@ -141,9 +139,9 @@ normal_path_peak_vram_mb
 emergency_fallback_peak_vram_mb
 ```
 
-### Priority 2: validation matrix
+### Next priority: real measurement matrix
 
-Implement or prepare the validation matrix:
+Keep the current matrix and replace proxy values cell by cell:
 
 ```text
 Model axis:
@@ -158,10 +156,10 @@ Visual axis:
   V1 low-res only
   V2 FoveateR ROI
   V3 oracle ROI
-  V4 FoveateR ROI + controlled fallback
+V4 FoveateR ROI + controlled fallback
 ```
 
-### Priority 3: safety and compatibility
+### Safety and compatibility
 
 Keep arbitrary multi-LoRA composition out of runtime.
 
@@ -194,11 +192,11 @@ Do not implement these as core requirements yet:
 
 They can remain as exploratory or future work.
 
-## 6. Expected README top-level wording
+## 6. Active runner
 
-The repository README should eventually say something close to:
-
-> This project studies low-VRAM vision inference through a two-track system. First, it consolidates multiple full vision specialist models into a single shared VLM backbone with taxonomy-tagged LoRA specialists, reducing resident model memory and mode-switch latency. Second, it uses FoveateR-style visual evidence compression to replace full high-resolution visual context with low-resolution global context plus high-resolution ROI glimpses, reducing visual tokens, prefill cost, and KV/cache growth.
+```powershell
+python scripts\run_3090_two_track_validation.py --config configs\3090_two_track_pilot.yaml --dry-run
+```
 
 ## 7. Strong rule for claims
 
