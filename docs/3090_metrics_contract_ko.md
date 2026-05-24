@@ -145,15 +145,35 @@ source:
   memory_source: qwen3_vl_4b_local_cuda_prefill_generate | dry_run_config_estimate
   visual_token_source: qwen3_vl_image_grid_thw | dry_run_visual_estimate
   quality_source: synthetic_proxy | real_task_score
+  task_score_source: synthetic_proxy | benchmark_label | human_eval | external_verifier
   adapter_memory_source: adapter_card_estimate | measured_adapter_residency
   adapter_execution_mode: shared_backbone_only | proxy_card_accounting | actual_peft | merged_lora
   roi_source: synthetic_probe | center_crop | oracle_box | OCR_box | foveater_model
   data_mode: synthetic_probe | stage1_smoke_manifest | real_task_manifest
-  task_validation_level: smoke_or_proxy | real_task_validation
+  image_source: dry_run_config_estimate | synthetic_probe_generated_images | manifest.full_image_path | manifest.metadata_only_dry_run
+  actual_image_execution: false
+  manifest_sample_id: null
+  manifest_full_image_path: null
+  source_dataset: null
+  source_url: null
+  prepared_full_image_path: null
+  prepared_low_res_path: null
+  prepared_roi_path: null
+  selected_image_paths: []
+  roi_box_rel_xyxy: null
+  roi_box_xyxy: null
+  evidence_preparation: null
+  task_validation_level: smoke_or_proxy | stage1_image_smoke | real_task_image_smoke | real_task_validation
+  source_semantics_version: v0.2
+  real_measurement_fields: []
+  estimate_or_proxy_fields: []
 ```
 
 `decode_incremental_peak_mb`는 호환성을 위해 유지하지만, 현재 구현에서는 순수 decode-only가 아니다.
 실제 의미상 `generate_extra_peak_over_prefill_mb`를 우선 읽는다.
+
+`actual_image_execution=true`는 manifest metadata를 단순히 읽었다는 뜻이 아니라, 해당 row의 `full_image_path`에서 실제 이미지를 열고 full/low-res/ROI evidence image를 만들어 real CUDA probe에 전달했다는 뜻이다.
+반대로 quality score가 `synthetic_proxy`이면, 같은 run에서 실제 이미지와 실제 CUDA memory를 썼더라도 task accuracy claim으로 승격하지 않는다.
 
 ## 10. Summary CSV required columns
 

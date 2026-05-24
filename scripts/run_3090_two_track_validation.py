@@ -39,6 +39,7 @@ from vfa_policy.core.validation_matrix import (
 from vfa_policy.foveation.roi_metrics import visual_estimate
 from vfa_policy.foveation.real_task_manifest import (
     load_task_manifest,
+    prepare_manifest_policy_evidence,
     prepare_manifest_policy_images,
     sample_for_index,
 )
@@ -223,6 +224,74 @@ def _task_validation_level(data_mode: str, actual_task_score_available: bool) ->
     return "smoke_or_proxy"
 
 
+def _repo_relative(path: str | Path) -> str:
+    resolved = Path(path).resolve()
+    try:
+        return str(resolved.relative_to(REPO_ROOT)).replace("\\", "/")
+    except ValueError:
+        return str(resolved).replace("\\", "/")
+
+
+def _image_source_label(*, task_sample: dict[str, Any] | None, real_probe: Qwen3VLRealProbe | None) -> str:
+    if task_sample and real_probe:
+        return "manifest.full_image_path"
+    if task_sample:
+        return "manifest.metadata_only_dry_run"
+    if real_probe:
+        return "synthetic_probe_generated_images"
+    return "dry_run_config_estimate"
+
+
+def _source_semantics(
+    *,
+    real_measurement: RealVisualMeasurement | None,
+    actual_image_execution: bool,
+    task_score_source: str,
+    adapter_execution_mode: str,
+) -> dict[str, Any]:
+    real_fields = []
+    proxy_fields = [
+        "adapter_bank_resident_mb",
+        "active_adapter_resident_mb",
+        "multi_specialist_resident_estimate_mb",
+        "task_score",
+        "verifier_score",
+    ]
+    if real_measurement:
+        real_fields.extend(
+            [
+                "base_after_load_allocated_mb",
+                "base_after_load_reserved_mb",
+                "visual_incremental_peak_mb",
+                "visual_token_count",
+                "prefill_latency_ms",
+                "generation_latency_ms",
+            ]
+        )
+        proxy_fields.append("generate_extra_peak_over_prefill_mb")
+    else:
+        proxy_fields.extend(
+            [
+                "base_after_load_allocated_mb",
+                "base_after_load_reserved_mb",
+                "visual_incremental_peak_mb",
+                "visual_token_count",
+                "prefill_latency_ms",
+                "generate_extra_peak_over_prefill_mb",
+            ]
+        )
+    if adapter_execution_mode in {"actual_peft", "merged_lora"}:
+        real_fields.append("adapter_execution_mode")
+        proxy_fields = [field for field in proxy_fields if field not in {"adapter_bank_resident_mb", "active_adapter_resident_mb"}]
+    return {
+        "source_semantics_version": "v0.2",
+        "actual_image_execution": actual_image_execution,
+        "task_score_source": task_score_source,
+        "real_measurement_fields": real_fields,
+        "estimate_or_proxy_fields": proxy_fields,
+    }
+
+
 def _trace_for_cell(
     *,
     run_id: str,
@@ -265,14 +334,17 @@ def _trace_for_cell(
     lora_switch_ms = lora_switch_latency_ms(adapter_cards, selected_adapter_id) if selected_adapter_id else None
     real_measurement_cache = real_measurement_cache if real_measurement_cache is not None else {}
     image_paths_override = None
+    manifest_evidence: dict[str, Any] | None = None
     if task_sample and real_probe:
-        image_paths_override, roi_source = prepare_manifest_policy_images(
+        manifest_evidence = prepare_manifest_policy_evidence(
             sample=task_sample,
             sample_index=sample_index,
             visual_policy=cell.visual_policy,
             run_dir=real_probe.run_dir,
             repo_root=REPO_ROOT,
         )
+        image_paths_override = manifest_evidence["image_paths"]
+        roi_source = str(manifest_evidence["roi_source"])
     real_measurement = _real_visual_measurement(
         real_probe=real_probe,
         cache=real_measurement_cache,
@@ -385,6 +457,7 @@ def _trace_for_cell(
     fallback_executed = bool(fallback["fallback_executed"])
     task_score = _quality_score(cell.id, sample_index, fallback_executed=fallback_executed, wrong_adapter=wrong_adapter)
     verifier_pass = task_score >= 0.78
+    task_score_source = "synthetic_proxy"
 
     failure_type = None
     terminal_action = None
@@ -405,8 +478,16 @@ def _trace_for_cell(
     )
     actual_task_score_available = False
     task_validation_level = _task_validation_level(data_mode, actual_task_score_available)
+    manifest_source = dict(manifest_evidence.get("source", {})) if manifest_evidence else {}
+    actual_image_execution = bool(task_sample and real_probe and manifest_evidence)
+    source_semantics = _source_semantics(
+        real_measurement=real_measurement,
+        actual_image_execution=actual_image_execution,
+        task_score_source=task_score_source,
+        adapter_execution_mode=adapter_execution_mode,
+    )
     return {
-        "schema_version": "3090.route_trace.v0.1",
+        "schema_version": "3090.route_trace.v0.2",
         "run_id": run_id,
         "sample_id": sample_id,
         "stage": "R0_R4_cuda_combined_pilot" if real_probe else "R4_combined_two_track_pilot",
@@ -474,7 +555,7 @@ def _trace_for_cell(
         "quality": {
             "task_score": task_score,
             "proxy_task_score": task_score,
-            "task_score_source": "synthetic_proxy",
+            "task_score_source": task_score_source,
             "actual_task_score_available": actual_task_score_available,
             "answer_correct": task_score >= 0.80,
             "score_retention_vs_oracle_lora": round(task_score / 0.845, 6),
@@ -489,11 +570,14 @@ def _trace_for_cell(
         "source": {
             "memory_source": measurement_source,
             "visual_token_source": visual.get("visual_token_count_source"),
-            "quality_source": "synthetic_proxy",
+            "quality_source": task_score_source,
             "adapter_memory_source": "adapter_card_estimate",
             "adapter_execution_mode": adapter_execution_mode,
             "roi_source": roi_source,
             "data_mode": data_mode,
+            "image_source": _image_source_label(task_sample=task_sample, real_probe=real_probe),
+            **manifest_source,
+            **source_semantics,
             "specialist_baseline_source": specialist_baseline.get(
                 "resident_estimate_method",
                 "same_backbone_after_load_times_count",
@@ -556,9 +640,45 @@ def _combined_result(
     tier1 = sum(1 for trace in traces if trace.get("fallback", {}).get("fallback_tier") == "tier1_controlled_expensive")
     tier2 = sum(1 for trace in traces if trace.get("fallback", {}).get("fallback_tier") == "tier2_emergency")
     total = len(traces) or 1
+    sources = [trace.get("source", {}) for trace in traces]
+    real_fields = sorted(
+        {
+            field
+            for source in sources
+            for field in source.get("real_measurement_fields", [])
+        }
+    )
+    proxy_fields = sorted(
+        {
+            field
+            for source in sources
+            for field in source.get("estimate_or_proxy_fields", [])
+        }
+    )
+    source_datasets = sorted(
+        {
+            str(source.get("source_dataset"))
+            for source in sources
+            if source.get("source_dataset")
+        }
+    )
+    image_sources = sorted(
+        {
+            str(source.get("image_source"))
+            for source in sources
+            if source.get("image_source")
+        }
+    )
+    roi_sources = sorted(
+        {
+            str(source.get("roi_source"))
+            for source in sources
+            if source.get("roi_source")
+        }
+    )
 
     return {
-        "schema_version": "3090.combined_validation_result.v0.1",
+        "schema_version": "3090.combined_validation_result.v0.2",
         "run_id": run_id,
         "measurement_mode": "real_cuda" if any(t.get("measurement_mode") == "real_cuda" for t in traces) else "dry_run_proxy",
         "data_mode": _data_mode(config),
@@ -619,9 +739,18 @@ def _combined_result(
             "memory_source": next((t.get("source", {}).get("memory_source") for t in traces), None),
             "visual_token_source": next((t.get("source", {}).get("visual_token_source") for t in traces), None),
             "quality_source": "synthetic_proxy",
+            "task_score_source": "synthetic_proxy",
             "adapter_memory_source": "adapter_card_estimate",
             "adapter_execution_mode": config.get("adapter_bank", {}).get("execution_mode", "proxy_card_accounting"),
             "data_mode": _data_mode(config),
+            "image_sources": image_sources,
+            "roi_sources": roi_sources,
+            "source_datasets": source_datasets,
+            "actual_image_execution": any(bool(source.get("actual_image_execution")) for source in sources),
+            "real_measurement_fields": real_fields,
+            "estimate_or_proxy_fields": proxy_fields,
+            "task_validation_level": next((source.get("task_validation_level") for source in sources), None),
+            "source_semantics_version": "v0.2",
             "roi_source": next((t.get("source", {}).get("roi_source") for t in traces), None),
         },
         "gates": gates,
@@ -696,6 +825,7 @@ Track B는 visual evidence compression이다. full image, low-res only, foveated
 ## RTX 3090 검증 프로토콜
 
 본 run은 `{measurement_label}` 모드, `{data_mode}` data mode로 실행되었다. 산출물은 `combined_validation_result.json`, `summary.csv`, `route_traces.jsonl`이다. 각 trace는 base-after-load memory, adapter resident estimate, visual incremental peak, generate-extra-over-prefill peak, fallback peak, route/failure label을 포함한다.
+source summary는 실제 측정 필드와 proxy/estimate 필드를 분리해 기록한다. 현재 source semantics version은 `{combined.get("source_summary", {}).get("source_semantics_version")}`이다.
 
 ## 측정 결과
 

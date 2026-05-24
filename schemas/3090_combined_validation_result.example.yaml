@@ -1,7 +1,7 @@
-schema_version: "3090.combined_validation_result.v0.1"
+schema_version: "3090.combined_validation_result.v0.2"
 run_id: "20260524T000000Z-3090_two_track_pilot"
 measurement_mode: "real_cuda"
-data_mode: "synthetic_probe"
+data_mode: "real_task_manifest"
 hardware:
   gpu: "NVIDIA GeForce RTX 3090"
   vram_budget_mb: 24576
@@ -58,10 +58,34 @@ source_summary:
   memory_source: "qwen3_vl_4b_local_cuda_prefill_generate"
   visual_token_source: "qwen3_vl_image_grid_thw"
   quality_source: "synthetic_proxy"
+  task_score_source: "synthetic_proxy"
   adapter_memory_source: "adapter_card_estimate"
   adapter_execution_mode: "proxy_card_accounting"
-  data_mode: "synthetic_probe"
-  roi_source: "synthetic_probe"
+  data_mode: "real_task_manifest"
+  roi_source: "center_crop"
+  image_sources:
+    - "manifest.full_image_path"
+  roi_sources:
+    - "center_crop"
+  source_datasets:
+    - "Lorem Picsum high-resolution real image smoke"
+  actual_image_execution: true
+  task_validation_level: "real_task_image_smoke"
+  source_semantics_version: "v0.2"
+  real_measurement_fields:
+    - "base_after_load_allocated_mb"
+    - "base_after_load_reserved_mb"
+    - "visual_incremental_peak_mb"
+    - "visual_token_count"
+    - "prefill_latency_ms"
+    - "generation_latency_ms"
+  estimate_or_proxy_fields:
+    - "active_adapter_resident_mb"
+    - "adapter_bank_resident_mb"
+    - "generate_extra_peak_over_prefill_mb"
+    - "multi_specialist_resident_estimate_mb"
+    - "task_score"
+    - "verifier_score"
 
 gates:
   completion_gate: true

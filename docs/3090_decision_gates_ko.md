@@ -83,10 +83,12 @@ promotion_gate:
 completion_gate:
   - C0, C1, C2, C3, C4 are logged
   - C5 oracle ROI is logged when available
+  - C6 low-res only and C7 controlled fallback are logged when the active config includes them
 
 measurement_gate:
   - resident and visual metrics are separately computed
   - normal path peak is separated from fallback peak
+  - source semantics record which fields are real measurements and which are proxy or estimate
 
 promotion_gate:
   - C4 normal path is under 3090 memory budget

@@ -43,6 +43,12 @@ key_metrics:
   visual_token_reduction:
   c4_normal_peak_mb:
   c4_controlled_fallback_peak_mb:
+source_semantics:
+  actual_image_execution:
+  image_sources:
+  roi_sources:
+  real_measurement_fields:
+  estimate_or_proxy_fields:
 gates:
   completion:
   measurement:
