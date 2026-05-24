@@ -1,80 +1,90 @@
 # VRAM-Constrained Foveated Adapter Policy
 
-이 프로젝트는 제한된 VRAM 환경에서 피지컬 AI의 perception, world model, planner, verifier가 함께 상주할 수 있도록 하는
-`Budget-Conditioned Foveated Adapter Policy` 설계와 발표/실험 제안 자료를 정리한 작업 폴더입니다.
-
-핵심 아이디어는 다음 세 축으로 정리합니다.
-
-- `Simula`: offline taxonomy와 synthetic/replay curriculum을 이용해 adapter tag와 router supervision을 준비하는 단계
-- `HydraLoRA`: 계층형 LoRA adapter bank와 resident set을 관리하는 물리적 adapter 구조
-- `Runtime policy`: VRAM budget, token cost, adapter residency, orchestration reserve를 조건으로 ROI와 adapter를 선택하는 정책
-
-## 주요 산출물
-
-- 정책 제안서: `output/policy/budget_conditioned_foveated_adapter_policy_proposal_ko.md`
-- 실험 제안서: `output/experiment/experiment_proposal_ko.md`
-- 발표 자료: `output/presentation/foveated_hydralora_policy_talk_ko_v2.pptx`
-- 발표 대본 최종본: `output/presentation/m5_user_script_final_ko.docx`
-- 소논문 초안: `output/paper/foveated_hydralora_arxiv.tex`
-- arXiv PDF 초안: `output/paper/foveated_hydralora_arxiv.pdf`
-- 한국어 소논문 PDF: `output/paper/foveated_hydralora_korean.pdf`
-
-## 폴더 구조
+이 프로젝트는 low-VRAM vision inference를 두 개의 상호보완 트랙으로 검증하는 연구 작업 폴더입니다.
 
 ```text
-output/
-  experiment/   실험 제안서와 pilot 관련 산출물
-  paper/        논문 형식 초안, 한국어 초안, 빌드된 PDF
-  policy/       최종 정책 제안서
-  presentation/ 발표 자료, 최종 대본, 이미지 asset
-    assets/     발표용 생성 이미지
+Track A. Shared-backbone LoRA specialist consolidation
+  여러 full specialist VLM
+  -> 하나의 공유 VLM backbone + taxonomy-tagged resident LoRA bank
+
+Track B. FoveateR-style visual evidence compression
+  full high-resolution visual context
+  -> low-resolution global view + high-resolution ROI glimpses
 ```
 
-## 현재 후속 방향
+두 트랙은 서로 다른 병목을 줄입니다.
 
-발표 준비 단계는 마무리되었고, 다음 단계는 RTX 3090에서 검증 가능한 pilot을 먼저 닫은 뒤 더 큰 장비로 확장하는 것입니다.
-Stage 0은 기존 3090 cost simulation 결과를 replay해 logging contract를 검증하고, Stage 1은 실제 VLM profiler로 foveation-only validation을 진행합니다.
+- Track A는 duplicated specialist backbone residency와 model swap latency를 줄인다.
+- Track B는 visual token count, prefill cost, visual KV/cache growth를 줄인다.
+- End-to-end peak VRAM 주장은 두 트랙을 함께 측정하되, normal path와 fallback/emergency peak를 분리해서 보고한다.
 
-실험은 최고 정확도 경쟁보다 다음 항목을 분해 측정하는 방향으로 둡니다.
+## 현재 핵심 문서
 
-- peak allocated VRAM
-- adapter resident memory
-- p95 latency
-- orchestration reserve pass/fail
-- adapter routing hit/miss와 fallback 빈도
+- Codex reframe guide: `CODEX_README.md`
+- Core plan: `docs/core_two_track_research_plan_ko.md`
+- Validation matrix: `docs/combined_validation_matrix_ko.md`
+- Memory accounting: `docs/resident_memory_accounting_protocol_ko.md`
+- Track A: `docs/shared_backbone_lora_consolidation_ko.md`
+- Track B: `docs/foveater_visual_evidence_compression_ko.md`
+- Compatibility certification: `docs/lora_compatibility_certification_ko.md`
+- Fallback budget tiers: `docs/fallback_budget_tiers_ko.md`
+- Claim boundary: `docs/claim_boundary_and_paper_positioning_ko.md`
 
-## Verification Pilot
+## 보조 및 탐색 문서
 
-- 검증 ladder: `docs/verification_ladder.md`
-- 측정/로그 계약: `docs/measurement_and_logging.md`
-- 실패 분석 playbook: `docs/failure_analysis_playbook.md`
-- Stage 0 설정: `configs/pilot_minimal.yaml`
-- Stage 1 데이터셋 후보: `docs/stage1_dataset_shortlist_ko.md`
-- Stage 0 closure: `docs/stage0_closure_report_ko.md`
-- Stage 1 closure: `docs/stage1_closure_report_ko.md`
-- Stage 1+ 환경: `docs/stage1plus_environment_ko.md`
-- Stage 1+ closure: `docs/stage1plus_closure_report_ko.md`
+```text
+docs/supporting/
+  stage1_foveation_smoke_closure_ko.md
 
-Stage 0은 기존 RTX 3090 cost simulation 결과를 새 logging contract로 replay하는 단계입니다. 실제 VLM profiler 측정은 Stage 1부터 진행합니다.
+docs/exploratory/
+  stage1plus_protocol_closure_ko.md
+```
 
-Stage 0 재현:
+Stage 1은 visual token / ROI cost accounting을 위한 supporting smoke evidence입니다.
+
+Stage 1+는 RouteTrace, adapter-card proxy wiring, LeWM/JEPA proxy, fallback/quarantine instrumentation이 한 계약 안에서 실행된다는 exploratory protocol closure입니다. Stage 1+를 trained LoRA 효과, JEPA runtime 우위, fallback recovery 성능의 최종 증거로 사용하지 않습니다.
+
+## Legacy 보관
+
+이전 방향의 문서와 발표/정책 초안은 삭제하지 않고 `Legacy/`로 이동했습니다.
+
+```text
+Legacy/docs/
+Legacy/output/
+Legacy/source_bundles/vfa_two_track_docs/
+```
+
+기존 발표 자료, 논문 초안 PDF/TeX, PPTX, 최종 대본 등 비마크다운 산출물은 `output/` 아래에 남아 있습니다.
+
+## 실행 참고
+
+Stage 0/1/1+ 실행 스크립트와 설정은 아직 repo에 남아 있으며, 현재는 supporting/exploratory evidence 재현용입니다.
 
 ```powershell
 python -m pip install -r requirements.txt
 python scripts\run_pilot.py --config configs\pilot_minimal.yaml
-```
-
-Stage 1 smoke 재현:
-
-```powershell
 python scripts\prepare_stage1_dataset.py --config configs\stage1_foveation_smoke.yaml
 python scripts\run_stage1_foveation.py --config configs\stage1_foveation_smoke.yaml
 ```
 
-Stage 1+ protocol pilot 재현:
+Stage 1+ Qwen3-VL protocol pilot:
 
 ```powershell
 .\.venv\Scripts\python scripts\run_stage1plus_protocol.py --config configs\stage1plus_protocol.yaml
 ```
 
-Stage 1+는 Qwen3-VL-4B를 사용해 foveation quality, LoRA isolation proxy, taxonomy-card routing, LeWM-style feature augmentation, JEPA-style outcome routing, verifier/fallback/quarantine을 같은 RouteTrace 계약 안에서 검증합니다. 실제 학습된 LoRA weight의 성능 주장은 아직 포함하지 않습니다.
+## Claim Rule
+
+항상 다음을 분리해서 말합니다.
+
+```text
+Resident VRAM reduction:
+  shared backbone, smaller/quantized backbone, adapter residency compression에서 온다.
+
+Visual token / KV reduction:
+  FoveateR-style ROI evidence compression에서 온다.
+
+End-to-end peak reduction:
+  Track A와 Track B를 함께 측정하고,
+  normal path / controlled fallback / emergency peak를 따로 보고해야 한다.
+```
