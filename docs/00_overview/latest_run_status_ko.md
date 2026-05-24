@@ -126,7 +126,8 @@ not_yet_claimed:
   - trained_lora_accuracy_gain
   - measured_full_specialist_joint_residency
   - general_benchmark_accuracy
-  - actual_ocr_detector_roi
+  - actual_ocr_detector_roi_generalization
+  - external_benchmark_ocr_detector_roi
   - trained_lora_generalization
   - production_latency_or_p99
   - final_milestone_closure_beyond_controlled_tiny_set
@@ -174,4 +175,29 @@ next_promotion_steps:
   - evaluate trained LoRA weights on held-out or external samples, not only tiny training smoke
   - measure LoRA bank switch latency across multiple actual adapters
   - measure full specialist joint residency only on larger hardware, or keep it as an explicit estimate
+```
+
+## 6. 최종 체크리스트
+
+```yaml
+closed_for_current_milestone:
+  - two-track research axis
+  - active docs structure
+  - local artifact boundary
+  - result brief workflow
+  - real CUDA memory/token accounting
+  - DEFAULT_CELLS C0-C7 and minimum/extended completion gates
+  - tiny scored normalized answer match
+  - ROI source comparison
+  - RapidOCR detector smoke
+  - sequential specialist swap smoke
+  - actual PEFT attach smoke
+  - tiny trained LoRA save/load smoke
+
+needs_next:
+  - ocr_detector_box n=16/n=32 stability run
+  - answer-only LoRA training loss mask
+  - actual PEFT full C-matrix beyond C3/C4
+  - external tiny benchmark subset
+  - held-out trained LoRA evaluation before any accuracy-gain claim
 ```

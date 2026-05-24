@@ -17,7 +17,7 @@ Status: claim boundary draft
 
 | Claim | Required Evidence |
 |---|---|
-| 실제 OCR detector ROI의 oracle gap을 측정했다. | `manifest_ocr_detector.jsonl` + `ocr_detector_available=true` samples |
+| 실제 OCR detector ROI의 smoke가 동작했다. | `manifest_ocr_detector.jsonl` + `ocr_detector_available=true` samples |
 | actual PEFT attach delta가 C3/C4 matrix trace에 반영됐다. | `adapter_memory_source=actual_loaded_adapter` in C3/C4 run |
 | tiny trained LoRA 학습/저장/로드 경로가 닫혔다. | `train_tiny_lora_smoke.py` + trained adapter matrix smoke |
 | ROI source 결과가 repeats=3에서도 같은 방향이다. | `run_roi_source_stability.py --execute` 결과 |
@@ -29,6 +29,7 @@ Status: claim boundary draft
 | 일반 benchmark에서도 score retention이 유지된다. | 외부 benchmark subset이 아직 없음 |
 | trained LoRA가 정확도를 유지하거나 향상한다. | 현재 PEFT는 untrained attach smoke |
 | tiny trained LoRA가 일반화된다. | 현재는 4-step controlled training smoke와 같은 tiny set load smoke |
+| actual OCR detector ROI가 안정적으로 oracle을 대체한다. | 현재는 n=4 controlled tiny smoke |
 | `layout_proxy_box`가 실제 OCR detector다. | controlled manifest box |
 | 여러 다른 full specialist VLM의 joint residency를 실측했다. | 현재는 estimate 또는 sequential proxy |
 | production p95/p99 latency가 검증됐다. | 단일-user local pilot |
