@@ -27,9 +27,11 @@ committed:
 dry_run_available: true
 real_cuda_smoke_available: true
 real_task_image_smoke_available: true
-real_task_validation_available: true
+controlled_tiny_real_task_validation_available: true
+broad_real_task_validation_available: false
 trained_lora_evaluation_available: false
-measured_multi_specialist_swap_available: true
+measured_sequential_specialist_swap_smoke_available: true
+measured_full_specialist_joint_residency_available: false
 actual_peft_attach_smoke_available: true
 
 local_only_reference_runs:
@@ -43,12 +45,14 @@ local_only_reference_runs:
   - .local/runs/20260524T062952Z-3090_two_track_pilot
 ```
 
-최신 local-only run 묶음은 RTX 3090에서 Qwen3-VL-4B local snapshot을 실제 CUDA로 로드하고, `tiny_scored_manifest`의 controlled image task에서 ROI source별 C0-C7 matrix, normalized answer match score, p95 memory/token fields를 기록한 M-B~M-F validation이다. 같은 커밋에서 sequential specialist swap과 actual PEFT attach smoke도 기록했다.
+최신 local-only run 묶음은 RTX 3090에서 Qwen3-VL-4B local snapshot을 실제 CUDA로 로드하고, `tiny_scored_manifest`의 controlled image task에서 ROI source별 C0-C7 matrix, normalized answer match score, p95 memory/token fields를 기록한 M-B~M-F initial measured validation pass다. 같은 커밋에서 sequential specialist swap baseline smoke와 actual PEFT attach smoke도 기록했다.
 
 Git에 남긴 최신 요약문은 [docs/20_results/2026-05-24_scored_roi_swap_peft_validation_ko.md](../20_results/2026-05-24_scored_roi_swap_peft_validation_ko.md)이다.
 
 ```yaml
 latest_scored_roi_validation:
+  status: "initial_measured_validation_pass"
+  final_milestone_closure: false
   runner_commit: "294b603"
   schema_version: "3090.combined_validation_result.v0.4"
   source_semantics_version: "v0.3"
@@ -71,6 +75,8 @@ latest_scored_roi_validation:
   actual_peft_run: "20260524T090446Z-actual_peft_smoke"
 ```
 
+이 상태는 controlled tiny set에서의 실측 pass를 의미한다. 일반 benchmark 우월성, trained LoRA accuracy gain, 실제 OCR detector ROI, full specialist joint residency는 아직 검증된 상태가 아니다.
+
 ## 3. 현재 claim level
 
 ```yaml
@@ -90,6 +96,7 @@ not_yet_claimed:
   - general_benchmark_accuracy
   - actual_ocr_detector_roi
   - production_latency_or_p99
+  - final_milestone_closure_beyond_controlled_tiny_set
 ```
 
 ## 4. Proxy와 real measurement 구분

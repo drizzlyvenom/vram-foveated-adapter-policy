@@ -2,20 +2,23 @@
 
 ## 요약
 
-`294b603` 기준 main 작업면에서 M-B~M-F 검증을 실행했다. 이번 목적은 기존 synthetic proxy score를 소논문 후보 근거로 쓰지 않고, 다음 proxy 항목을 실제 측정으로 교체하는 것이다.
+`294b603` 기준 main 작업면에서 M-B~M-F의 initial measured validation pass를 실행했다. 이번 목적은 기존 synthetic proxy score를 소논문 후보 근거로 쓰지 않고, 교체 가능한 proxy 항목을 실제 측정으로 한 단계 낮춰 검증하는 것이다.
+
+주의할 점은 이 pass가 최종 benchmark closure가 아니라는 것이다. M-B/M-C는 controlled tiny set 기준의 1차 근거로 정리하고, M-D/M-E/M-F는 후속 비교를 위한 measured baseline과 smoke evidence로 해석한다.
 
 ```yaml
-closed_milestones:
-  M-B_ROI_source_comparison: true
-  M-C_tiny_scored_task_validation: true
-  M-D_sequential_specialist_swap: true
-  M-E_actual_peft_smoke: true
-  M-F_repeated_n16_pilot: true
+milestone_status:
+  M-B_ROI_source_comparison: "initial measured pass completed on controlled tiny set"
+  M-C_tiny_scored_task_validation: "substantially closed for controlled tiny set"
+  M-D_sequential_specialist_swap: "measured baseline smoke completed"
+  M-E_actual_peft_smoke: "actual attach smoke completed; adapter is untrained"
+  M-F_repeated_n16_pilot: "n=16 pass completed; n=32 or repeats=3 not yet"
 
 claim_boundary:
   final_benchmark_superiority: false
   trained_lora_gain: false
   production_p95_p99: false
+  final_milestone_closure: false
   controlled_tiny_validation: true
 ```
 
@@ -163,7 +166,7 @@ not_yet:
 
 ## M-F: n=16 반복 측정
 
-이번 ROI source comparison은 각 ROI source별 n=16으로 실행했다. 아직 n=32, repeats=3까지는 확장하지 않았지만, 기존 n=1~2 smoke에서 한 단계 올라가 mean과 p95 필드를 같은 schema로 남겼다.
+이번 ROI source comparison은 각 ROI source별 n=16으로 실행했다. 아직 n=32, repeats=3까지는 확장하지 않았지만, 기존 n=1~2 smoke에서 한 단계 올라가 mean과 p95 필드를 같은 schema로 남겼다. 따라서 이는 안정성 검증의 최종 pass가 아니라 반복 측정의 1차 기준선이다.
 
 ```yaml
 repeated_pilot:
@@ -179,7 +182,7 @@ repeated_pilot:
 
 ## 결론
 
-이번 마일스톤에서 가장 중요한 변화는 `task_score_source=synthetic_proxy`를 `task_score_source=normalized_answer_match`로 교체했다는 점이다. 이 controlled tiny validation 안에서는 oracle/layout ROI가 full-image score를 유지하면서 C4 visual token을 C3 대비 약 61.46% 줄였고, center crop은 target evidence hit가 낮을 때 score가 크게 떨어졌다.
+이번 initial measured pass에서 가장 중요한 변화는 `task_score_source=synthetic_proxy`를 `task_score_source=normalized_answer_match`로 교체했다는 점이다. 이 controlled tiny validation 안에서는 oracle/layout ROI가 full-image score를 유지하면서 C4 visual token을 C3 대비 약 61.46% 줄였고, center crop은 target evidence hit가 낮을 때 score가 크게 떨어졌다.
 
 소논문에서 사용할 수 있는 가장 보수적인 문장은 다음이다.
 
