@@ -84,6 +84,14 @@ C6_low_res_only:
   visual_token_count_mean: 100.0
   normal_path_peak_mb_mean: 8593.007
 
+C7_controlled_fallback:
+  task_score_mean: 1.0
+  visual_token_count_mean: 296.0
+  normal_path_peak_mb_mean: 8684.136
+  controlled_fallback_peak_mb_conditional_mean: 8962.83075
+  controlled_fallback_peak_mb_all_samples_mean: 8962.83075
+  controlled_fallback_rate: 1.0
+
 visual_summary:
   c4_visual_token_reduction_vs_c3: 0.614583
   prefill_latency_reduction_vs_full: 0.762288
@@ -96,6 +104,7 @@ safe:
   - "RapidOCR 기반 ocr_detector_box manifest 생성과 n=4 real CUDA matrix smoke가 동작했다."
   - "controlled tiny n=4 smoke에서 OCR detector ROI는 full-image score를 유지하면서 visual tokens를 768에서 296으로 줄였다."
   - "low-res only는 같은 n=4 smoke에서 score가 0.0으로 떨어졌다."
+  - "C7 controlled fallback도 같은 C0-C7 smoke에 포함됐고, fallback path peak와 fallback rate가 기록됐다."
 
 not_yet:
   - "OCR detector가 외부 benchmark에서도 oracle에 가깝다."

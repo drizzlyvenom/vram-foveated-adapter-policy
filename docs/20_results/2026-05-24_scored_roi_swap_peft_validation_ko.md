@@ -92,6 +92,22 @@ C4_token_reduction_vs_C3:
   center_crop: 0.614583
   oracle_box: 0.614583
   ocr_box_or_layout_box: 0.614583
+
+C6_low_res_only:
+  task_score_mean: 0.125
+  visual_token_count_mean: 100.0
+  normal_path_peak_mb_mean: 8593.007
+  controlled_fallback_rate: 0.0
+
+C7_controlled_fallback:
+  center_crop_score: 0.3125
+  oracle_box_score: 0.9375
+  ocr_box_or_layout_box_score: 0.9375
+  visual_token_count_mean: 296.0
+  normal_path_peak_mb_mean: 8684.136
+  controlled_fallback_peak_mb_conditional_mean: 8962.519687
+  controlled_fallback_peak_mb_all_samples_mean: 8962.519687
+  controlled_fallback_rate: 1.0
 ```
 
 해석:
@@ -101,6 +117,7 @@ safe:
   - "동일한 visual token budget에서 ROI source가 target evidence를 포함하는지 여부가 actual task score를 크게 바꾼다."
   - "oracle_box와 legacy ocr_box_or_layout_box(layout proxy)는 이 controlled tiny set에서 full-image score를 유지하면서 visual tokens를 768에서 296으로 줄였다."
   - "low-res only는 visual token은 100으로 가장 낮지만 score가 0.125로 떨어졌다."
+  - "C6/C7 extended cells는 n=16 run 산출물에 포함되어 있으며, C7 controlled fallback peak와 fallback rate가 기록됐다."
 
 not_yet:
   - "일반 benchmark에서 같은 score retention이 유지된다."

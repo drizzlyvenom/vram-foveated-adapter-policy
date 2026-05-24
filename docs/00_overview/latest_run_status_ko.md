@@ -75,6 +75,12 @@ latest_scored_roi_validation:
   c4_visual_token_count_mean: 296.0
   c3_visual_token_count_mean: 768.0
   c4_visual_token_reduction_vs_c3: 0.614583
+  c6_low_res_score: 0.125
+  c6_low_res_visual_tokens: 100.0
+  c7_ocr_layout_score: 0.9375
+  c7_visual_tokens: 296.0
+  c7_controlled_fallback_peak_mb_all_samples_mean: 8962.519687
+  c7_controlled_fallback_rate: 1.0
   task_score_source: "normalized_answer_match"
   actual_task_score_available_rate: 1.0
   specialist_swap_run: "20260524T090422Z-specialist_swap_smoke"
@@ -96,6 +102,11 @@ latest_ocr_detector_and_trained_lora_smoke:
   ocr_detector_c4_task_score_mean: 1.0
   ocr_detector_c4_visual_tokens: 296.0
   ocr_detector_c3_visual_tokens: 768.0
+  ocr_detector_c6_low_res_task_score_mean: 0.0
+  ocr_detector_c6_low_res_visual_tokens: 100.0
+  ocr_detector_c7_task_score_mean: 1.0
+  ocr_detector_c7_controlled_fallback_peak_mb_all_samples_mean: 8962.83075
+  ocr_detector_c7_controlled_fallback_rate: 1.0
   tiny_lora_train_run: "20260524T095906Z-tiny_lora_train"
   latest_adapter_dir: ".local/adapters/tiny_lora_latest"
   tiny_lora_train_steps: 4
@@ -164,6 +175,18 @@ estimate_or_proxy:
   - generate_extra_peak_over_prefill_mb as generate-minus-prefill proxy
 ```
 
+### 4.1 아직 조심해야 할 부분
+
+리서치 메모에서 지적한 주의점 중 현재 작업면에 남아 있는 것은 다음이다.
+
+```yaml
+still_cautious:
+  - "OCR detector는 RapidOCR manifest 20/20 생성과 n=4 C0-C7 smoke까지 완료됐지만, n=16/n=32 반복 안정성은 아직 아니다."
+  - "tiny trained LoRA는 학습, 저장, 로드 경로 smoke가 완료됐지만, answer-only loss mask와 held-out 평가는 아직 아니다."
+  - "trained LoRA matrix smoke는 의도적으로 C3/C4만 돌렸으므로 actual PEFT full C-matrix 검증으로 해석하지 않는다."
+  - "C6/C7은 현재 DEFAULT_CELLS와 결과 산출물에 포함되어 있으나, 외부 benchmark claim으로 승격된 것은 아니다."
+```
+
 ## 5. 다음 승격 조건
 
 다음 단계는 방어 문구를 더 붙이는 것이 아니라, proxy를 실제 실험으로 하나씩 교체하는 것이다.
@@ -175,6 +198,17 @@ next_promotion_steps:
   - evaluate trained LoRA weights on held-out or external samples, not only tiny training smoke
   - measure LoRA bank switch latency across multiple actual adapters
   - measure full specialist joint residency only on larger hardware, or keep it as an explicit estimate
+```
+
+리서치 메모의 `다음에 뭘 더 검증하면 좋을까` 항목은 아래 queue로 정리한다.
+
+```yaml
+next_validation_queue:
+  - "ocr_detector_box n=16 또는 n=32/repeats=3으로 C0-C7 재실행"
+  - "LoRA 학습 label을 answer-only loss mask로 좁히고, tiny train/held-out split 분리"
+  - "trained adapter를 actual_loaded_adapter로 로드한 full C-matrix 실행, 최소 C0/C3/C4/C5/C6/C7"
+  - "외부 tiny benchmark subset 또는 사람이 검수한 hold-out image task로 score source 교체"
+  - "accuracy gain claim은 held-out trained LoRA 평가가 통과한 뒤에만 개방"
 ```
 
 ## 6. 최종 체크리스트
@@ -193,6 +227,7 @@ closed_for_current_milestone:
   - sequential specialist swap smoke
   - actual PEFT attach smoke
   - tiny trained LoRA save/load smoke
+  - C6 low-res and C7 controlled fallback reporting in result briefs
 
 needs_next:
   - ocr_detector_box n=16/n=32 stability run
