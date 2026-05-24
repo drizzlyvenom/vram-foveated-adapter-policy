@@ -6,6 +6,10 @@ tmp/
 trashbin/
 local_workbench/
 
+# Local Codex/agent handoff notes
+/CODEX_*.md
+/docs/*codex*_implementation*_ko.md
+
 # Python/cache artifacts
 __pycache__/
 *.pyc

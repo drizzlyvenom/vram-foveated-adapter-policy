@@ -20,13 +20,10 @@ Track B. FoveateR-style visual evidence compression
 
 ## 현재 핵심 문서
 
-- Codex reframe guide: `CODEX_README.md`
-- 3090 validation goal: `CODEX_GOAL_3090_TWO_TRACK.md`
 - 3090 validation guideline: `docs/3090_two_track_validation_guideline_ko.md`
 - 3090 execution ladder: `docs/3090_execution_ladder_ko.md`
 - 3090 metrics contract: `docs/3090_metrics_contract_ko.md`
 - 3090 decision gates: `docs/3090_decision_gates_ko.md`
-- 3090 implementation plan: `docs/3090_codex_implementation_plan_ko.md`
 - latest local run status: `docs/latest_run_status_ko.md`
 - result briefs: `docs/results/`
 - 3090 pilot config: `configs/3090_two_track_pilot.yaml`
