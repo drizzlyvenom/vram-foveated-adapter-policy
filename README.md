@@ -28,6 +28,7 @@ Track B. FoveateR-style visual evidence compression
 - 3090 decision gates: `docs/3090_decision_gates_ko.md`
 - 3090 implementation plan: `docs/3090_codex_implementation_plan_ko.md`
 - latest local run status: `docs/latest_run_status_ko.md`
+- result briefs: `docs/results/`
 - 3090 pilot config: `configs/3090_two_track_pilot.yaml`
 - 3090 adapter cards: `configs/3090_adapter_cards.yaml`
 - 3090 result schemas: `schemas/3090_residency_trace.example.yaml`, `schemas/3090_combined_validation_result.example.yaml`

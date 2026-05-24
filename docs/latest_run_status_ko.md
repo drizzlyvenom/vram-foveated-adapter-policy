@@ -37,6 +37,8 @@ local_only_reference_runs:
 
 이 local-only run은 RTX 3090에서 Qwen3-VL-4B local snapshot을 실제 CUDA로 로드하고, `real_task_manifest`의 고해상도 실제 이미지에서 full/low-res/ROI visual path의 token, prefill, CUDA peak를 기록한 smoke다.
 
+Git에 남긴 요약문은 [docs/results/2026-05-24_real_task_image_smoke_ko.md](results/2026-05-24_real_task_image_smoke_ko.md)이다.
+
 ```yaml
 latest_real_task_image_smoke:
   run_id: "20260524T062952Z-3090_two_track_pilot"
