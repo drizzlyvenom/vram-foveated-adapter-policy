@@ -32,16 +32,20 @@ trained_lora_evaluation_available: false
 measured_multi_specialist_swap_available: false
 
 local_only_reference_runs:
+  - runs/20260524T072015Z-3090_two_track_pilot
   - runs/20260524T062952Z-3090_two_track_pilot
 ```
 
-이 local-only run은 RTX 3090에서 Qwen3-VL-4B local snapshot을 실제 CUDA로 로드하고, `real_task_manifest`의 고해상도 실제 이미지에서 full/low-res/ROI visual path의 token, prefill, CUDA peak를 기록한 smoke다.
+최신 local-only run은 RTX 3090에서 Qwen3-VL-4B local snapshot을 실제 CUDA로 로드하고, `real_task_manifest`의 고해상도 실제 이미지에서 full/low-res/ROI visual path의 token, prefill, CUDA peak를 기록한 reproducibility/source-semantics closure다.
 
-Git에 남긴 요약문은 [docs/results/2026-05-24_real_task_image_smoke_ko.md](results/2026-05-24_real_task_image_smoke_ko.md)이다.
+Git에 남긴 최신 요약문은 [docs/results/2026-05-24_reproducibility_source_semantics_closure_ko.md](results/2026-05-24_reproducibility_source_semantics_closure_ko.md)이다.
 
 ```yaml
 latest_real_task_image_smoke:
-  run_id: "20260524T062952Z-3090_two_track_pilot"
+  run_id: "20260524T072015Z-3090_two_track_pilot"
+  runner_commit: "ba2029a"
+  schema_version: "3090.combined_validation_result.v0.2"
+  source_semantics_version: "v0.2"
   samples: 2
   matrix_cells: [C0, C1, C2, C3, C4, C5, C6, C7]
   c0_full_visual_tokens_mean: 768.0
@@ -50,6 +54,8 @@ latest_real_task_image_smoke:
   c4_normal_path_peak_mb_mean: 8681.853
   c4_controlled_fallback_peak_mb_mean: 8962.613
   roi_source: "center_crop"
+  image_source: "manifest.full_image_path"
+  actual_image_execution: true
   task_score_source: "synthetic_proxy"
 ```
 
@@ -82,6 +88,7 @@ real_measurement:
   - visual_incremental_peak_mb in real CUDA mode
   - visual_token_count from qwen3_vl_image_grid_thw in real CUDA mode
   - real_task_manifest image path execution in real CUDA mode
+  - source_semantics fields showing manifest image path and selected evidence paths
 
 estimate_or_proxy:
   - adapter_bank_resident_mb from adapter cards
