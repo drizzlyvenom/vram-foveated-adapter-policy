@@ -14,6 +14,51 @@ R4. Combined two-track pilot
 R5. Compatibility and collapse instrumentation
 ```
 
+## Current validation milestones
+
+M-A 이후의 검증은 proxy를 실제 측정으로 교체하는 순서로 닫는다.
+
+```yaml
+M-B_ROI_source_comparison:
+  goal: center_crop, oracle_box, ocr_box_or_layout_box를 같은 tiny scored manifest에서 비교
+  required:
+    - actual_image_execution: true
+    - task_score_source: normalized_answer_match
+    - roi_contains_target_evidence
+    - visual_token_count / prefill_latency / normal_path_peak
+
+M-C_tiny_scored_task_validation:
+  goal: synthetic_proxy task_score를 실제 모델 답변의 normalized answer match로 교체
+  required:
+    - expected_answers
+    - answer_type
+    - actual_task_score_available_rate: 1.0
+
+M-D_sequential_specialist_swap:
+  goal: full specialist proxy model의 load/unload/reload latency 실측
+  required:
+    - model_load_latency_ms
+    - unload_empty_cache_latency_ms
+    - residual_allocated_mb
+    - residual_reserved_mb
+
+M-E_actual_peft_smoke:
+  goal: proxy_card_accounting과 별개로 실제 PEFT LoRA attach path의 memory/latency 측정
+  required:
+    - adapter_execution_mode: actual_peft
+    - adapter_memory_source: actual_loaded_adapter
+    - peft_allocated_delta_mb
+    - peft_attach_latency_ms
+
+M-F_repeated_pilot:
+  goal: n=16 이상 반복 측정으로 mean뿐 아니라 p95를 보고
+  required:
+    - visual_token_count_p95
+    - normal_path_peak_mb_p95
+    - visual_incremental_peak_mb_p95
+    - controlled_fallback_peak_mb_all_samples_p95
+```
+
 ## R0. Memory accounting smoke
 
 ### Goal

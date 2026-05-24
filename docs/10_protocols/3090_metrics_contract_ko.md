@@ -81,9 +81,12 @@ quality:
   verifier_score: null
   verifier_pass: null
   confidence: null
-  confidence_source: proxy_score_no_ground_truth | answer_match_proxy | model_logit | external_verifier | none
-  task_score_source: synthetic_proxy | benchmark_label | human_eval | external_verifier
+  confidence_source: proxy_score_no_ground_truth | answer_match | model_logit | external_verifier | none
+  task_score_source: synthetic_proxy | normalized_answer_match | benchmark_label | human_eval | external_verifier
   actual_task_score_available: false
+  answer_type: text | number | label | yes_no | null
+  expected_answer_count: null
+  matched_expected_answer: null
 ```
 
 ## 6. Routing and compatibility metrics
@@ -158,27 +161,33 @@ failure_types:
 source:
   memory_source: qwen3_vl_4b_local_cuda_prefill_generate | dry_run_config_estimate
   visual_token_source: qwen3_vl_image_grid_thw | dry_run_visual_estimate
-  quality_source: synthetic_proxy | real_task_score
-  task_score_source: synthetic_proxy | benchmark_label | human_eval | external_verifier
+  quality_source: synthetic_proxy | normalized_answer_match | benchmark_label | human_eval | external_verifier
+  task_score_source: synthetic_proxy | normalized_answer_match | benchmark_label | human_eval | external_verifier
   adapter_memory_source: adapter_card_estimate | measured_adapter_residency
   adapter_execution_mode: shared_backbone_only | proxy_card_accounting | actual_peft | merged_lora
-  roi_source: synthetic_probe | center_crop | oracle_box | OCR_box | foveater_model
-  data_mode: synthetic_probe | stage1_smoke_manifest | real_task_manifest
+  roi_source: synthetic_probe | center_crop | oracle_box | ocr_box_or_layout_box | foveater_model
+  data_mode: synthetic_probe | stage1_smoke_manifest | real_task_manifest | tiny_scored_manifest
   image_source: dry_run_config_estimate | synthetic_probe_generated_images | manifest.full_image_path | manifest.metadata_only_dry_run
   actual_image_execution: false
   manifest_sample_id: null
   manifest_full_image_path: null
   source_dataset: null
   source_url: null
+  task_family: null
+  answer_type: null
   prepared_full_image_path: null
   prepared_low_res_path: null
   prepared_roi_path: null
   selected_image_paths: []
   roi_box_rel_xyxy: null
   roi_box_xyxy: null
+  target_box_rel_xyxy: null
+  target_box_xyxy: null
+  roi_target_iou: null
+  roi_contains_target_evidence: null
   evidence_preparation: null
   task_validation_level: smoke_or_proxy | stage1_image_smoke | real_task_image_smoke | real_task_validation
-  source_semantics_version: v0.2
+  source_semantics_version: v0.3
   real_measurement_fields: []
   estimate_or_proxy_fields: []
 ```
@@ -204,16 +213,21 @@ proxy_task_score_mean
 task_score_source
 actual_task_score_available_rate
 normal_path_peak_mb_mean
+normal_path_peak_mb_p95
 controlled_fallback_peak_mb_mean
 controlled_fallback_peak_mb_conditional_mean
+controlled_fallback_peak_mb_conditional_p95
 controlled_fallback_peak_mb_all_samples_mean
+controlled_fallback_peak_mb_all_samples_p95
 controlled_fallback_rate
 fallback_rate
 emergency_peak_mb_mean
 base_after_load_allocated_mb_mean
 adapter_bank_resident_mb_mean
 visual_incremental_peak_mb_mean
+visual_incremental_peak_mb_p95
 visual_token_count_mean
+visual_token_count_p95
 kv_cache_estimate_mb_mean
 prefill_latency_ms_p95
 mode_switch_latency_ms_p95

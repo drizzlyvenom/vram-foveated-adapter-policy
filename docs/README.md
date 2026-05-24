@@ -26,6 +26,7 @@ results:
   - docs/20_results/README.md
   - docs/20_results/2026-05-24_real_task_image_smoke_ko.md
   - docs/20_results/2026-05-24_reproducibility_source_semantics_closure_ko.md
+  - docs/20_results/2026-05-24_metric_gate_semantics_closure_ko.md
 ```
 
 원본 실행 산출물은 `.local/runs/`에 두고 Git에는 올리지 않는다. Git에는 재현 명령, 핵심 수치, gate 상태, source semantics, claim boundary를 담은 result brief만 남긴다.

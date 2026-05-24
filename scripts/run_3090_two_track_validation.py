@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -88,6 +89,87 @@ def _quality_score(cell_id: str, sample_index: int, *, fallback_executed: bool, 
     if wrong_adapter:
         score -= 0.055
     return round(max(0.0, min(1.0, score)), 6)
+
+
+def _normalize_answer_text(value: Any) -> str:
+    text = str(value or "").upper()
+    text = re.sub(r"[^A-Z0-9.+\\-]+", " ", text)
+    return " ".join(text.split())
+
+
+def _expected_answers(task_sample: dict[str, Any] | None) -> list[str]:
+    if not task_sample:
+        return []
+    expected = task_sample.get("expected_answers")
+    if expected is None and task_sample.get("expected_answer") is not None:
+        expected = [task_sample.get("expected_answer")]
+    if isinstance(expected, str):
+        return [expected]
+    if isinstance(expected, list):
+        return [str(item) for item in expected if item not in (None, "")]
+    return []
+
+
+def _label_set(values) -> str:
+    labels = sorted({str(value) for value in values if value not in (None, "")})
+    return "|".join(labels) if labels else "unknown"
+
+
+def _score_actual_answer(
+    *,
+    task_sample: dict[str, Any] | None,
+    answer_text: str | None,
+) -> dict[str, Any]:
+    expected = _expected_answers(task_sample)
+    if not expected or answer_text is None:
+        return {
+            "available": False,
+            "score": None,
+            "answer_correct": None,
+            "source": "synthetic_proxy",
+            "confidence_source": "proxy_score_no_ground_truth",
+            "matched_expected_answer": None,
+        }
+
+    answer_type = str(task_sample.get("answer_type") or "text").lower() if task_sample else "text"
+    normalized_answer = _normalize_answer_text(answer_text)
+    normalized_expected = [_normalize_answer_text(item) for item in expected]
+    matched = None
+    score = 0.0
+
+    if answer_type == "number":
+        numbers = [float(item) for item in re.findall(r"[-+]?\d+(?:\.\d+)?", normalized_answer)]
+        tolerance = float(task_sample.get("numeric_tolerance", 0.0)) if task_sample else 0.0
+        for expected_text, normalized in zip(expected, normalized_expected):
+            expected_numbers = [float(item) for item in re.findall(r"[-+]?\d+(?:\.\d+)?", normalized)]
+            if expected_numbers and any(abs(value - expected_numbers[0]) <= tolerance for value in numbers):
+                matched = expected_text
+                score = 1.0
+                break
+    else:
+        answer_tokens = set(normalized_answer.split())
+        for expected_text, normalized in zip(expected, normalized_expected):
+            if not normalized:
+                continue
+            if normalized in normalized_answer:
+                matched = expected_text
+                score = 1.0
+                break
+            expected_tokens = set(normalized.split())
+            if expected_tokens:
+                token_f1_like = len(answer_tokens & expected_tokens) / len(expected_tokens)
+                if token_f1_like > score:
+                    score = round(token_f1_like, 6)
+                    matched = expected_text if score >= 1.0 else None
+
+    return {
+        "available": True,
+        "score": round(float(score), 6),
+        "answer_correct": bool(score >= 0.999),
+        "source": "normalized_answer_match",
+        "confidence_source": "answer_match",
+        "matched_expected_answer": matched,
+    }
 
 
 def _fallback_for(cell_id: str, sample_index: int, visual_policy: str) -> dict[str, Any]:
@@ -215,6 +297,8 @@ def _specialist_baseline_config(config: dict[str, Any]) -> dict[str, Any]:
 
 
 def _task_validation_level(data_mode: str, actual_task_score_available: bool) -> str:
+    if data_mode == "tiny_scored_manifest":
+        return "real_task_validation" if actual_task_score_available else "real_task_image_smoke"
     if data_mode == "real_task_manifest":
         return "real_task_validation" if actual_task_score_available else "real_task_image_smoke"
     if data_mode == "stage1_smoke_manifest":
@@ -246,6 +330,7 @@ def _source_semantics(
     actual_image_execution: bool,
     task_score_source: str,
     adapter_execution_mode: str,
+    actual_task_score_available: bool,
 ) -> dict[str, Any]:
     real_fields = []
     proxy_fields = [
@@ -281,8 +366,11 @@ def _source_semantics(
     if adapter_execution_mode in {"actual_peft", "merged_lora"}:
         real_fields.append("adapter_execution_mode")
         proxy_fields = [field for field in proxy_fields if field not in {"adapter_bank_resident_mb", "active_adapter_resident_mb"}]
+    if actual_task_score_available:
+        real_fields.append("task_score")
+        proxy_fields = [field for field in proxy_fields if field != "task_score"]
     return {
-        "source_semantics_version": "v0.2",
+        "source_semantics_version": "v0.3",
         "actual_image_execution": actual_image_execution,
         "task_score_source": task_score_source,
         "real_measurement_fields": real_fields,
@@ -340,6 +428,7 @@ def _trace_for_cell(
             visual_policy=cell.visual_policy,
             run_dir=real_probe.run_dir,
             repo_root=REPO_ROOT,
+            roi_source_override=roi_source,
         )
         image_paths_override = manifest_evidence["image_paths"]
         roi_source = str(manifest_evidence["roi_source"])
@@ -386,6 +475,7 @@ def _trace_for_cell(
                     visual_policy="full_image",
                     run_dir=real_probe.run_dir,
                     repo_root=REPO_ROOT,
+                    roi_source_override=roi_source,
                 )[0]
                 if task_sample and real_probe
                 else None
@@ -453,9 +543,20 @@ def _trace_for_cell(
     resident_saving = compute_resident_saving(shared_plus_lora_mb, multi_specialist_estimate_mb)
     wrong_adapter = bool(selected_adapter_id and not top1_hit)
     fallback_executed = bool(fallback["fallback_executed"])
-    task_score = _quality_score(cell.id, sample_index, fallback_executed=fallback_executed, wrong_adapter=wrong_adapter)
+    proxy_task_score = _quality_score(
+        cell.id,
+        sample_index,
+        fallback_executed=fallback_executed,
+        wrong_adapter=wrong_adapter,
+    )
+    actual_score = _score_actual_answer(
+        task_sample=task_sample,
+        answer_text=real_measurement.answer_text if real_measurement else None,
+    )
+    actual_task_score_available = bool(actual_score["available"])
+    task_score = float(actual_score["score"]) if actual_task_score_available else proxy_task_score
     verifier_pass = task_score >= 0.78
-    task_score_source = "synthetic_proxy"
+    task_score_source = str(actual_score["source"]) if actual_task_score_available else "synthetic_proxy"
 
     failure_type = None
     terminal_action = None
@@ -474,7 +575,6 @@ def _trace_for_cell(
         if task_sample and task_sample.get("sample_id")
         else f"sample_{sample_index:04d}"
     )
-    actual_task_score_available = False
     task_validation_level = _task_validation_level(data_mode, actual_task_score_available)
     manifest_source = dict(manifest_evidence.get("source", {})) if manifest_evidence else {}
     actual_image_execution = bool(task_sample and real_probe and manifest_evidence)
@@ -483,6 +583,7 @@ def _trace_for_cell(
         actual_image_execution=actual_image_execution,
         task_score_source=task_score_source,
         adapter_execution_mode=adapter_execution_mode,
+        actual_task_score_available=actual_task_score_available,
     )
     return {
         "schema_version": "3090.route_trace.v0.2",
@@ -552,17 +653,20 @@ def _trace_for_cell(
         },
         "quality": {
             "task_score": task_score,
-            "proxy_task_score": task_score,
+            "proxy_task_score": proxy_task_score,
             "task_score_source": task_score_source,
             "actual_task_score_available": actual_task_score_available,
-            "answer_correct": task_score >= 0.80,
+            "answer_correct": actual_score["answer_correct"] if actual_task_score_available else task_score >= 0.80,
+            "answer_type": task_sample.get("answer_type") if task_sample else None,
+            "expected_answer_count": len(_expected_answers(task_sample)),
+            "matched_expected_answer": actual_score["matched_expected_answer"],
             "score_retention_vs_oracle_lora": round(task_score / 0.845, 6),
             "score_retention_vs_full_specialist": None,
             "score_gain_vs_shared_backbone_only": None,
             "verifier_score": task_score,
             "verifier_pass": verifier_pass,
             "confidence": task_score,
-            "confidence_source": "proxy_score_no_ground_truth",
+            "confidence_source": actual_score["confidence_source"],
             "answer_preview": real_measurement.answer_text[:500] if real_measurement else None,
         },
         "source": {
@@ -582,6 +686,8 @@ def _trace_for_cell(
             ),
             "task_validation_level": task_validation_level,
             "source_dataset": task_sample.get("source_dataset") if task_sample else None,
+            "task_family": task_sample.get("task_family") if task_sample else None,
+            "answer_type": task_sample.get("answer_type") if task_sample else None,
         },
         "routing": {
             "router_type": "none" if selected_adapter_id is None else ("oracle" if cell.model_axis.endswith("oracle_lora") else "taxonomy_card"),
@@ -634,15 +740,24 @@ def _combined_result(
                 "task_score_source": row.get("task_score_source"),
                 "actual_task_score_available_rate": row.get("actual_task_score_available_rate"),
                 "normal_path_peak_mb_mean": row.get("normal_path_peak_mb_mean"),
+                "normal_path_peak_mb_p95": row.get("normal_path_peak_mb_p95"),
                 "controlled_fallback_peak_mb_conditional_mean": row.get(
                     "controlled_fallback_peak_mb_conditional_mean"
+                ),
+                "controlled_fallback_peak_mb_conditional_p95": row.get(
+                    "controlled_fallback_peak_mb_conditional_p95"
                 ),
                 "controlled_fallback_peak_mb_all_samples_mean": row.get(
                     "controlled_fallback_peak_mb_all_samples_mean"
                 ),
+                "controlled_fallback_peak_mb_all_samples_p95": row.get(
+                    "controlled_fallback_peak_mb_all_samples_p95"
+                ),
                 "controlled_fallback_rate": row.get("controlled_fallback_rate"),
                 "fallback_rate": row.get("fallback_rate"),
                 "visual_token_count_mean": row.get("visual_token_count_mean"),
+                "visual_token_count_p95": row.get("visual_token_count_p95"),
+                "visual_incremental_peak_mb_p95": row.get("visual_incremental_peak_mb_p95"),
             }
         )
 
@@ -672,6 +787,13 @@ def _combined_result(
             if source.get("source_dataset")
         }
     )
+    task_families = sorted(
+        {
+            str(source.get("task_family"))
+            for source in sources
+            if source.get("task_family")
+        }
+    )
     image_sources = sorted(
         {
             str(source.get("image_source"))
@@ -688,7 +810,7 @@ def _combined_result(
     )
 
     return {
-        "schema_version": "3090.combined_validation_result.v0.3",
+        "schema_version": "3090.combined_validation_result.v0.4",
         "run_id": run_id,
         "measurement_mode": "real_cuda" if any(t.get("measurement_mode") == "real_cuda" for t in traces) else "dry_run_proxy",
         "data_mode": _data_mode(config),
@@ -763,19 +885,20 @@ def _combined_result(
         "source_summary": {
             "memory_source": next((t.get("source", {}).get("memory_source") for t in traces), None),
             "visual_token_source": next((t.get("source", {}).get("visual_token_source") for t in traces), None),
-            "quality_source": "synthetic_proxy",
-            "task_score_source": "synthetic_proxy",
+            "quality_source": _label_set(source.get("task_score_source") for source in sources),
+            "task_score_source": _label_set(source.get("task_score_source") for source in sources),
             "adapter_memory_source": "adapter_card_estimate",
             "adapter_execution_mode": config.get("adapter_bank", {}).get("execution_mode", "proxy_card_accounting"),
             "data_mode": _data_mode(config),
             "image_sources": image_sources,
             "roi_sources": roi_sources,
             "source_datasets": source_datasets,
+            "task_families": task_families,
             "actual_image_execution": any(bool(source.get("actual_image_execution")) for source in sources),
             "real_measurement_fields": real_fields,
             "estimate_or_proxy_fields": proxy_fields,
             "task_validation_level": next((source.get("task_validation_level") for source in sources), None),
-            "source_semantics_version": "v0.2",
+            "source_semantics_version": "v0.3",
             "roi_source": next((t.get("source", {}).get("roi_source") for t in traces), None),
         },
         "gates": gates,
@@ -805,6 +928,13 @@ def _write_korean_reports(
     c4 = row("C4")
     measurement_label = "dry-run/proxy" if dry_run else "real CUDA"
     data_mode = str(combined.get("data_mode") or "synthetic_probe")
+    task_score_source = str(combined.get("source_summary", {}).get("task_score_source") or "unknown")
+    actual_task_score_rate = c4.get("actual_task_score_available_rate")
+    score_boundary = (
+        f"현재 task score source는 `{task_score_source}`이고, C4 actual_task_score_available_rate는 {_fmt(actual_task_score_rate)}입니다."
+        if task_score_source != "synthetic_proxy"
+        else f"현재 quality score는 실제 task accuracy가 아니라 synthetic proxy입니다. `data_mode={data_mode}`는 실제 이미지 smoke 여부를 나타내지만, 실제 task score가 없는 run은 final validation으로 승격하지 않습니다."
+    )
     result_summary = f"""# 3090 투트랙 검증 결과 요약
 
 - run_id: `{combined.get("run_id")}`
@@ -832,7 +962,7 @@ def _write_korean_reports(
 이 결과는 RTX 3090 단일 장비에서 memory accounting과 feasibility를 확인하기 위한 파일입니다.
 trained LoRA 성능 향상, 최종 benchmark superiority, production p99 serving claim은 주장하지 않습니다.
 Foveation은 resident backbone memory가 아니라 visual token, prefill, KV/cache 계열 비용을 줄이는 축으로만 해석합니다.
-현재 quality score는 실제 task accuracy가 아니라 synthetic proxy입니다. `data_mode={data_mode}`는 실제 이미지 smoke 여부를 나타내지만, 실제 task score가 없는 run은 final validation으로 승격하지 않습니다.
+{score_boundary}
 """
 
     short_paper = f"""# 저 VRAM 비전 추론을 위한 공유 백본-어댑터 및 Foveated Evidence 투트랙 검증
@@ -859,7 +989,7 @@ fallback peak summary는 conditional mean과 all-sample mean을 분리한다. co
 
 ## 측정 결과
 
-C0 full-image visual token mean은 {_fmt(c0.get("visual_token_count_mean"))}이고, C4 taxonomy LoRA + foveated ROI visual token mean은 {_fmt(c4.get("visual_token_count_mean"))}이다. C4 normal path peak mean은 {_fmt(c4.get("normal_path_peak_mb_mean"), " MB")}로 기록되었다. shared backbone + LoRA bank resident estimate는 {_fmt(combined.get("resident_summary", {}).get("shared_backbone_plus_lora_bank_resident_mb"), " MB")}이며, multi-specialist resident estimate는 {_fmt(combined.get("resident_summary", {}).get("multi_specialist_resident_estimate_mb"), " MB")}이다. 이 품질 수치는 실제 benchmark score가 아니라 synthetic proxy다.
+C0 full-image visual token mean은 {_fmt(c0.get("visual_token_count_mean"))}이고, C4 taxonomy LoRA + foveated ROI visual token mean은 {_fmt(c4.get("visual_token_count_mean"))}이다. C4 normal path peak mean은 {_fmt(c4.get("normal_path_peak_mb_mean"), " MB")}로 기록되었다. shared backbone + LoRA bank resident estimate는 {_fmt(combined.get("resident_summary", {}).get("shared_backbone_plus_lora_bank_resident_mb"), " MB")}이며, multi-specialist resident estimate는 {_fmt(combined.get("resident_summary", {}).get("multi_specialist_resident_estimate_mb"), " MB")}이다. task score source는 `{task_score_source}`로 기록되며, 실제 task score가 없는 run은 성능 검증으로 승격하지 않는다.
 
 ## 실패 분석
 
@@ -884,8 +1014,16 @@ def main() -> int:
     parser.add_argument("--max-samples", type=int, default=None)
     parser.add_argument("--dry-run", action="store_true", help="Force dry-run mode even if config changes later.")
     parser.add_argument("--real-run", action="store_true", help="Load the local Qwen3-VL snapshot and record CUDA memory.")
-    parser.add_argument("--data-mode", choices=["synthetic_probe", "stage1_smoke_manifest", "real_task_manifest"])
+    parser.add_argument(
+        "--data-mode",
+        choices=["synthetic_probe", "stage1_smoke_manifest", "real_task_manifest", "tiny_scored_manifest"],
+    )
     parser.add_argument("--manifest", help="JSONL manifest for stage1_smoke_manifest or real_task_manifest mode.")
+    parser.add_argument(
+        "--roi-source",
+        choices=["center_crop", "oracle_box", "ocr_box_or_layout_box", "layout_box"],
+        help="Override the non-oracle ROI source for manifest image preparation.",
+    )
     parser.add_argument("--max-new-tokens", type=int, default=4, help="Decode tokens used by the real CUDA probe.")
     args = parser.parse_args()
     if args.dry_run and args.real_run:
@@ -901,6 +1039,8 @@ def main() -> int:
         config.setdefault("data", {})["mode"] = args.data_mode
     if args.manifest:
         config.setdefault("data", {})["manifest_path"] = args.manifest
+    if args.roi_source:
+        config.setdefault("data", {})["roi_source"] = args.roi_source
     if args.max_samples is not None:
         config.setdefault("run", {})["max_samples"] = args.max_samples
 
@@ -910,7 +1050,7 @@ def main() -> int:
     dry_run = bool(config.get("run", {}).get("dry_run", True))
     data_mode = _data_mode(config)
     manifest_samples: list[dict[str, Any]] = []
-    if data_mode in {"stage1_smoke_manifest", "real_task_manifest"}:
+    if data_mode in {"stage1_smoke_manifest", "real_task_manifest", "tiny_scored_manifest"}:
         manifest_path = config.get("data", {}).get("manifest_path")
         if not manifest_path:
             failure = {

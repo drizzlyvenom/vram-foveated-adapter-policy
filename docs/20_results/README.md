@@ -42,19 +42,25 @@ matrix_cells:
 key_metrics:
   c0_visual_tokens:
   c4_visual_tokens:
+  c4_visual_tokens_p95:
   visual_token_reduction:
   c4_normal_peak_mb:
+  c4_normal_peak_mb_p95:
   c4_controlled_fallback_peak_mb_conditional_mean:
+  c4_controlled_fallback_peak_mb_conditional_p95:
   c4_controlled_fallback_peak_mb_all_samples_mean:
+  c4_controlled_fallback_peak_mb_all_samples_p95:
   c4_controlled_fallback_rate:
 score_semantics:
   task_score_source:
   proxy_task_score_mean:
   actual_task_score_available_rate:
+  scoring_method:
 source_semantics:
   actual_image_execution:
   image_sources:
   roi_sources:
+  roi_contains_target_evidence:
   real_measurement_fields:
   estimate_or_proxy_fields:
 gates:

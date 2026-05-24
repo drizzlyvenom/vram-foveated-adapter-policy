@@ -10,6 +10,7 @@ DEFAULT_TWO_TRACK_CONFIG = "configs/3090/two_track_pilot.yaml"
 DEFAULT_ADAPTER_CARDS = "configs/3090/adapter_cards.yaml"
 DEFAULT_RUNS_DIR = ".local/runs"
 DEFAULT_REAL_TASK_DIR = ".local/data/real_task_smoke"
+DEFAULT_TINY_SCORED_DIR = ".local/data/tiny_scored_manifest"
 
 
 def resolve_repo_path(path_text: str | Path) -> Path:

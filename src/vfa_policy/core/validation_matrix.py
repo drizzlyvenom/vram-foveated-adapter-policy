@@ -72,16 +72,21 @@ SUMMARY_COLUMNS = [
     "task_score_source",
     "actual_task_score_available_rate",
     "normal_path_peak_mb_mean",
+    "normal_path_peak_mb_p95",
     "controlled_fallback_peak_mb_mean",
     "controlled_fallback_peak_mb_conditional_mean",
+    "controlled_fallback_peak_mb_conditional_p95",
     "controlled_fallback_peak_mb_all_samples_mean",
+    "controlled_fallback_peak_mb_all_samples_p95",
     "controlled_fallback_rate",
     "fallback_rate",
     "emergency_peak_mb_mean",
     "base_after_load_allocated_mb_mean",
     "adapter_bank_resident_mb_mean",
     "visual_incremental_peak_mb_mean",
+    "visual_incremental_peak_mb_p95",
     "visual_token_count_mean",
+    "visual_token_count_p95",
     "kv_cache_estimate_mb_mean",
     "prefill_latency_ms_p95",
     "mode_switch_latency_ms_p95",
@@ -181,9 +186,12 @@ def summarize_3090_traces(traces: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 lambda row: bool(row.get("actual_task_score_available")),
             ),
             "normal_path_peak_mb_mean": mean_numeric([m.get("normal_path_peak_mb") for m in memory]),
+            "normal_path_peak_mb_p95": p95_numeric([m.get("normal_path_peak_mb") for m in memory]),
             "controlled_fallback_peak_mb_mean": mean_numeric(controlled_fallback_values),
             "controlled_fallback_peak_mb_conditional_mean": mean_numeric(controlled_fallback_values),
+            "controlled_fallback_peak_mb_conditional_p95": p95_numeric(controlled_fallback_values),
             "controlled_fallback_peak_mb_all_samples_mean": mean_numeric(fallback_aware_peak_values),
+            "controlled_fallback_peak_mb_all_samples_p95": p95_numeric(fallback_aware_peak_values),
             "controlled_fallback_rate": controlled_fallback_rate,
             "fallback_rate": fallback_rate,
             "emergency_peak_mb_mean": mean_numeric([m.get("emergency_fallback_peak_mb") for m in memory]),
@@ -194,7 +202,11 @@ def summarize_3090_traces(traces: list[dict[str, Any]]) -> list[dict[str, Any]]:
             "visual_incremental_peak_mb_mean": mean_numeric(
                 [m.get("visual_incremental_peak_mb") for m in memory]
             ),
+            "visual_incremental_peak_mb_p95": p95_numeric(
+                [m.get("visual_incremental_peak_mb") for m in memory]
+            ),
             "visual_token_count_mean": mean_numeric([v.get("visual_token_count") for v in visual]),
+            "visual_token_count_p95": p95_numeric([v.get("visual_token_count") for v in visual]),
             "kv_cache_estimate_mb_mean": mean_numeric([v.get("kv_cache_estimate_mb") for v in visual]),
             "prefill_latency_ms_p95": p95_numeric([v.get("prefill_latency_ms") for v in visual]),
             "mode_switch_latency_ms_p95": p95_numeric([r.get("mode_switch_latency_ms") for r in residency]),
@@ -253,8 +265,8 @@ def build_gate_report(
         or bool(trace.get("model_residency", {}).get("measured_joint_residency_available"))
         for trace in traces
     )
-    non_synthetic_data = data_mode in {"stage1_smoke_manifest", "real_task_manifest"}
-    real_task_data = data_mode == "real_task_manifest"
+    non_synthetic_data = data_mode in {"stage1_smoke_manifest", "real_task_manifest", "tiny_scored_manifest"}
+    real_task_data = data_mode in {"real_task_manifest", "tiny_scored_manifest"}
 
     resident_track_promotion_gate = bool(
         not dry_run
@@ -286,6 +298,8 @@ def build_gate_report(
         notes.append("Promotion is disabled until trained LoRA and stronger evidence justify it.")
     if not non_synthetic_data:
         notes.append("Synthetic probe data can support memory smoke, not real task validation.")
+    if data_mode == "tiny_scored_manifest":
+        notes.append("Tiny scored manifest supports controlled task validation, not broad benchmark superiority.")
     if not has_actual_adapter:
         notes.append("Adapter path is proxy accounting until actual PEFT or merged LoRA weights are evaluated.")
     if not has_measured_specialist_baseline:
