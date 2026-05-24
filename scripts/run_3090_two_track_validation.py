@@ -620,6 +620,7 @@ def _combined_result(
     c0 = by_cell("C0")
     c3 = by_cell("C3")
     c4 = by_cell("C4")
+    c7 = by_cell("C7")
     cell_rows = []
     for row in summary_rows:
         cell_rows.append(
@@ -629,7 +630,18 @@ def _combined_result(
                 "visual_axis": next((t.get("visual_axis") for t in traces if t.get("matrix_cell") == row.get("matrix_cell")), None),
                 "n_samples": row.get("n_samples"),
                 "task_score_mean": row.get("task_score_mean"),
+                "proxy_task_score_mean": row.get("proxy_task_score_mean"),
+                "task_score_source": row.get("task_score_source"),
+                "actual_task_score_available_rate": row.get("actual_task_score_available_rate"),
                 "normal_path_peak_mb_mean": row.get("normal_path_peak_mb_mean"),
+                "controlled_fallback_peak_mb_conditional_mean": row.get(
+                    "controlled_fallback_peak_mb_conditional_mean"
+                ),
+                "controlled_fallback_peak_mb_all_samples_mean": row.get(
+                    "controlled_fallback_peak_mb_all_samples_mean"
+                ),
+                "controlled_fallback_rate": row.get("controlled_fallback_rate"),
+                "fallback_rate": row.get("fallback_rate"),
                 "visual_token_count_mean": row.get("visual_token_count_mean"),
             }
         )
@@ -676,7 +688,7 @@ def _combined_result(
     )
 
     return {
-        "schema_version": "3090.combined_validation_result.v0.2",
+        "schema_version": "3090.combined_validation_result.v0.3",
         "run_id": run_id,
         "measurement_mode": "real_cuda" if any(t.get("measurement_mode") == "real_cuda" for t in traces) else "dry_run_proxy",
         "data_mode": _data_mode(config),
@@ -731,6 +743,21 @@ def _combined_result(
             "tier2_rate": round(tier2 / total, 6),
             "normal_path_peak_mb_mean": c4.get("normal_path_peak_mb_mean"),
             "controlled_fallback_peak_mb_mean": c4.get("controlled_fallback_peak_mb_mean"),
+            "controlled_fallback_peak_mb_conditional_mean": c4.get(
+                "controlled_fallback_peak_mb_conditional_mean"
+            ),
+            "controlled_fallback_peak_mb_all_samples_mean": c4.get(
+                "controlled_fallback_peak_mb_all_samples_mean"
+            ),
+            "controlled_fallback_rate": c4.get("controlled_fallback_rate"),
+            "fallback_rate": c4.get("fallback_rate"),
+            "c7_controlled_fallback_peak_mb_conditional_mean": c7.get(
+                "controlled_fallback_peak_mb_conditional_mean"
+            ),
+            "c7_controlled_fallback_peak_mb_all_samples_mean": c7.get(
+                "controlled_fallback_peak_mb_all_samples_mean"
+            ),
+            "c7_controlled_fallback_rate": c7.get("controlled_fallback_rate"),
             "emergency_peak_mb_mean": c4.get("emergency_peak_mb_mean"),
         },
         "source_summary": {
@@ -784,6 +811,8 @@ def _write_korean_reports(
 - measurement mode: `{measurement_label}`
 - data mode: `{data_mode}`
 - completion_gate: `{combined.get("gates", {}).get("completion_gate")}`
+- minimum_completion_gate: `{combined.get("gates", {}).get("minimum_completion_gate")}`
+- extended_completion_gate: `{combined.get("gates", {}).get("extended_completion_gate")}`
 - measurement_gate: `{combined.get("gates", {}).get("measurement_gate")}`
 - promotion_gate: `{combined.get("gates", {}).get("promotion_gate")}`
 
@@ -792,7 +821,9 @@ def _write_korean_reports(
 - C0 full-image visual token mean: {_fmt(c0.get("visual_token_count_mean"))}
 - C4 foveated visual token mean: {_fmt(c4.get("visual_token_count_mean"))}
 - C4 normal path peak mean: {_fmt(c4.get("normal_path_peak_mb_mean"), " MB")}
-- C4 controlled fallback peak mean: {_fmt(c4.get("controlled_fallback_peak_mb_mean"), " MB")}
+- C4 controlled fallback conditional peak mean: {_fmt(c4.get("controlled_fallback_peak_mb_conditional_mean"), " MB")}
+- C4 controlled fallback all-sample peak mean: {_fmt(c4.get("controlled_fallback_peak_mb_all_samples_mean"), " MB")}
+- C4 controlled fallback rate: {_fmt(c4.get("controlled_fallback_rate"))}
 - shared backbone + LoRA bank resident estimate: {_fmt(combined.get("resident_summary", {}).get("shared_backbone_plus_lora_bank_resident_mb"), " MB")}
 - multi-specialist resident estimate: {_fmt(combined.get("resident_summary", {}).get("multi_specialist_resident_estimate_mb"), " MB")}
 
@@ -824,6 +855,7 @@ Track B는 visual evidence compression이다. full image, low-res only, foveated
 
 본 run은 `{measurement_label}` 모드, `{data_mode}` data mode로 실행되었다. 산출물은 `combined_validation_result.json`, `summary.csv`, `route_traces.jsonl`이다. 각 trace는 base-after-load memory, adapter resident estimate, visual incremental peak, generate-extra-over-prefill peak, fallback peak, route/failure label을 포함한다.
 source summary는 실제 측정 필드와 proxy/estimate 필드를 분리해 기록한다. 현재 source semantics version은 `{combined.get("source_summary", {}).get("source_semantics_version")}`이다.
+fallback peak summary는 conditional mean과 all-sample mean을 분리한다. conditional mean은 fallback이 실제 실행된 샘플만 평균내고, all-sample mean은 fallback이 없던 샘플의 normal path peak를 포함해 policy-level expected peak로 읽는다.
 
 ## 측정 결과
 

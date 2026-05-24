@@ -43,7 +43,13 @@ key_metrics:
   c4_visual_tokens:
   visual_token_reduction:
   c4_normal_peak_mb:
-  c4_controlled_fallback_peak_mb:
+  c4_controlled_fallback_peak_mb_conditional_mean:
+  c4_controlled_fallback_peak_mb_all_samples_mean:
+  c4_controlled_fallback_rate:
+score_semantics:
+  task_score_source:
+  proxy_task_score_mean:
+  actual_task_score_available_rate:
 source_semantics:
   actual_image_execution:
   image_sources:

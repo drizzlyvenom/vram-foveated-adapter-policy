@@ -1,4 +1,4 @@
-schema_version: "3090.combined_validation_result.v0.2"
+schema_version: "3090.combined_validation_result.v0.3"
 run_id: "20260524T000000Z-3090_two_track_pilot"
 measurement_mode: "real_cuda"
 data_mode: "real_task_manifest"
@@ -18,14 +18,28 @@ matrix_cells:
     visual_axis: "V0_full_fixed_image"
     n_samples: 20
     task_score_mean: 0.82
+    proxy_task_score_mean: 0.82
+    task_score_source: "synthetic_proxy"
+    actual_task_score_available_rate: 0.0
     normal_path_peak_mb_mean: 9100.0
+    controlled_fallback_peak_mb_conditional_mean: null
+    controlled_fallback_peak_mb_all_samples_mean: 9100.0
+    controlled_fallback_rate: 0.0
+    fallback_rate: 0.0
     visual_token_count_mean: 609
   - id: "C4"
     model_axis: "M3_shared_backbone_taxonomy_lora"
     visual_axis: "V2_foveater_roi"
     n_samples: 20
     task_score_mean: 0.81
+    proxy_task_score_mean: 0.81
+    task_score_source: "synthetic_proxy"
+    actual_task_score_available_rate: 0.0
     normal_path_peak_mb_mean: 8960.0
+    controlled_fallback_peak_mb_conditional_mean: 9300.0
+    controlled_fallback_peak_mb_all_samples_mean: 8977.0
+    controlled_fallback_rate: 0.05
+    fallback_rate: 0.10
     visual_token_count_mean: 430
 
 resident_summary:
@@ -52,6 +66,13 @@ fallback_summary:
   tier2_rate: 0.00
   normal_path_peak_mb_mean: 8960.0
   controlled_fallback_peak_mb_mean: 9300.0
+  controlled_fallback_peak_mb_conditional_mean: 9300.0
+  controlled_fallback_peak_mb_all_samples_mean: 8977.0
+  controlled_fallback_rate: 0.05
+  fallback_rate: 0.10
+  c7_controlled_fallback_peak_mb_conditional_mean: 9300.0
+  c7_controlled_fallback_peak_mb_all_samples_mean: 9300.0
+  c7_controlled_fallback_rate: 1.0
   emergency_peak_mb_mean: null
 
 source_summary:
@@ -89,6 +110,8 @@ source_summary:
 
 gates:
   completion_gate: true
+  minimum_completion_gate: true
+  extended_completion_gate: true
   measurement_gate: true
   promotion_gate: false
   promotion_notes:

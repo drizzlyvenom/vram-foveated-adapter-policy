@@ -115,6 +115,20 @@ fallback:
   visited_actions: []
 ```
 
+fallback peak summary는 다음 세 값을 구분한다.
+
+```yaml
+fallback_summary:
+  controlled_fallback_peak_mb_conditional_mean:
+    meaning: "tier1 controlled fallback이 실제 실행된 샘플만 평균"
+  controlled_fallback_peak_mb_all_samples_mean:
+    meaning: "fallback이 없는 샘플은 normal_path_peak_mb로 채워 전체 샘플 기준 평균"
+  controlled_fallback_rate:
+    meaning: "tier1 controlled fallback이 실제 실행된 샘플 비율"
+```
+
+기존 `controlled_fallback_peak_mb_mean`은 호환성을 위해 유지하되, 새 분석에서는 `controlled_fallback_peak_mb_conditional_mean`을 우선 읽는다.
+
 ## 8. Failure labels
 
 Use these labels consistently.
@@ -186,8 +200,15 @@ visual_policy
 n_samples
 task_score_mean
 task_score_std
+proxy_task_score_mean
+task_score_source
+actual_task_score_available_rate
 normal_path_peak_mb_mean
 controlled_fallback_peak_mb_mean
+controlled_fallback_peak_mb_conditional_mean
+controlled_fallback_peak_mb_all_samples_mean
+controlled_fallback_rate
+fallback_rate
 emergency_peak_mb_mean
 base_after_load_allocated_mb_mean
 adapter_bank_resident_mb_mean

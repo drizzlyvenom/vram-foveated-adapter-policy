@@ -18,6 +18,20 @@ gates:
 
 Stage 1+ 같은 exploratory run은 completion/measurement는 pass해도 promotion은 fail일 수 있다.
 
+completion gate는 두 층으로 나눈다.
+
+```yaml
+minimum_completion_gate:
+  required_cells: [C0, C1, C2, C3, C4, C5]
+  role: "기본 two-track matrix가 실행됐는지 확인"
+
+extended_completion_gate:
+  required_cells: [C0, C1, C2, C3, C4, C5, C6, C7]
+  role: "소논문 표에 넣을 low-res only와 controlled fallback path까지 포함됐는지 확인"
+```
+
+하위 호환을 위해 top-level `completion_gate`는 minimum gate와 같은 의미로 유지한다. 소논문용 결과 표에는 extended gate를 함께 보고한다.
+
 ## 2. Resident compression gates
 
 ### R1 multi-specialist baseline gate
@@ -106,6 +120,8 @@ fallback_gate:
   pass_if:
     - fallback_tier is recorded
     - normal_path_peak is not overwritten by emergency fallback peak
+    - controlled fallback conditional mean and all-sample mean are separated
+    - controlled_fallback_rate is reported
     - terminal model errors are not quarantined as unsafe adapter failures
     - tier2 emergency rate is reported separately
 ```

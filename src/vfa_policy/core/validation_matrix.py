@@ -30,7 +30,12 @@ DEFAULT_CELLS = [
     ("C3", "M3_shared_backbone_taxonomy_lora", "V0_full_fixed_image"),
     ("C4", "M3_shared_backbone_taxonomy_lora", "V2_foveater_roi"),
     ("C5", "M3_shared_backbone_taxonomy_lora", "V3_oracle_roi"),
+    ("C6", "M3_shared_backbone_taxonomy_lora", "V1_low_res_only"),
+    ("C7", "M3_shared_backbone_taxonomy_lora", "V4_foveater_roi_controlled_fallback"),
 ]
+
+MINIMUM_COMPLETION_CELLS = {"C0", "C1", "C2", "C3", "C4", "C5"}
+EXTENDED_COMPLETION_CELLS = {"C0", "C1", "C2", "C3", "C4", "C5", "C6", "C7"}
 
 
 @dataclass(frozen=True)
@@ -63,8 +68,15 @@ SUMMARY_COLUMNS = [
     "n_samples",
     "task_score_mean",
     "task_score_std",
+    "proxy_task_score_mean",
+    "task_score_source",
+    "actual_task_score_available_rate",
     "normal_path_peak_mb_mean",
     "controlled_fallback_peak_mb_mean",
+    "controlled_fallback_peak_mb_conditional_mean",
+    "controlled_fallback_peak_mb_all_samples_mean",
+    "controlled_fallback_rate",
+    "fallback_rate",
     "emergency_peak_mb_mean",
     "base_after_load_allocated_mb_mean",
     "adapter_bank_resident_mb_mean",
@@ -112,6 +124,13 @@ def _rate(items: list[dict[str, Any]], predicate) -> float:
     return round(sum(1 for item in items if predicate(item)) / len(items), 6)
 
 
+def _source_label(values: Iterable[Any]) -> str:
+    labels = sorted({str(value) for value in values if value not in (None, "")})
+    if not labels:
+        return "unknown"
+    return "|".join(labels)
+
+
 def summarize_3090_traces(traces: list[dict[str, Any]]) -> list[dict[str, Any]]:
     grouped: dict[tuple[str, str, str], list[dict[str, Any]]] = {}
     for trace in traces:
@@ -132,6 +151,19 @@ def summarize_3090_traces(traces: list[dict[str, Any]]) -> list[dict[str, Any]]:
         routing = [item.get("routing", {}) for item in items]
         fallback = [item.get("fallback", {}) for item in items]
         failure = [item.get("failure", {}) for item in items]
+        controlled_fallback_values = [m.get("controlled_fallback_peak_mb") for m in memory]
+        fallback_aware_peak_values = [
+            m.get("controlled_fallback_peak_mb")
+            if m.get("controlled_fallback_peak_mb") is not None
+            else m.get("normal_path_peak_mb")
+            for m in memory
+        ]
+        controlled_fallback_rate = _rate(
+            fallback,
+            lambda row: row.get("fallback_tier") == "tier1_controlled_expensive"
+            and bool(row.get("fallback_executed")),
+        )
+        fallback_rate = _rate(fallback, lambda row: bool(row.get("fallback_executed")))
 
         row = {
             "run_id": run_id,
@@ -142,8 +174,18 @@ def summarize_3090_traces(traces: list[dict[str, Any]]) -> list[dict[str, Any]]:
             "n_samples": len(items),
             "task_score_mean": mean_numeric([q.get("task_score") for q in quality]),
             "task_score_std": _std(q.get("task_score") for q in quality),
+            "proxy_task_score_mean": mean_numeric([q.get("proxy_task_score") for q in quality]),
+            "task_score_source": _source_label(q.get("task_score_source") for q in quality),
+            "actual_task_score_available_rate": _rate(
+                quality,
+                lambda row: bool(row.get("actual_task_score_available")),
+            ),
             "normal_path_peak_mb_mean": mean_numeric([m.get("normal_path_peak_mb") for m in memory]),
-            "controlled_fallback_peak_mb_mean": mean_numeric([m.get("controlled_fallback_peak_mb") for m in memory]),
+            "controlled_fallback_peak_mb_mean": mean_numeric(controlled_fallback_values),
+            "controlled_fallback_peak_mb_conditional_mean": mean_numeric(controlled_fallback_values),
+            "controlled_fallback_peak_mb_all_samples_mean": mean_numeric(fallback_aware_peak_values),
+            "controlled_fallback_rate": controlled_fallback_rate,
+            "fallback_rate": fallback_rate,
             "emergency_peak_mb_mean": mean_numeric([m.get("emergency_fallback_peak_mb") for m in memory]),
             "base_after_load_allocated_mb_mean": mean_numeric(
                 [m.get("base_after_load_allocated_mb") for m in memory]
@@ -185,7 +227,9 @@ def build_gate_report(
     c4 = next((row for row in summary_rows if row.get("matrix_cell") == "C4"), {})
     c3 = next((row for row in summary_rows if row.get("matrix_cell") == "C3"), {})
 
-    completion_gate = all(cell in cell_ids for cell in {"C0", "C1", "C2", "C3", "C4", "C5"})
+    minimum_completion_gate = all(cell in cell_ids for cell in MINIMUM_COMPLETION_CELLS)
+    extended_completion_gate = all(cell in cell_ids for cell in EXTENDED_COMPLETION_CELLS)
+    completion_gate = minimum_completion_gate
     measurement_gate = all(
         trace.get("memory", {}).get("base_after_load_allocated_mb") is not None
         and trace.get("memory", {}).get("normal_path_peak_mb") is not None
@@ -236,6 +280,8 @@ def build_gate_report(
     notes = []
     if dry_run:
         notes.append("Dry-run/proxy-only result. Do not claim final performance.")
+    if not extended_completion_gate:
+        notes.append("Extended C0-C7 matrix is incomplete; use minimum C0-C5 completion only.")
     if not allow_promotion:
         notes.append("Promotion is disabled until trained LoRA and stronger evidence justify it.")
     if not non_synthetic_data:
@@ -253,11 +299,17 @@ def build_gate_report(
 
     return {
         "completion_gate": completion_gate,
+        "minimum_completion_gate": minimum_completion_gate,
+        "extended_completion_gate": extended_completion_gate,
         "measurement_gate": measurement_gate,
         "promotion_gate": promotion_gate,
         "promotion_notes": notes,
         "checks": {
             "required_cells_present": sorted(cell_ids),
+            "minimum_required_cells": sorted(MINIMUM_COMPLETION_CELLS),
+            "extended_required_cells": sorted(EXTENDED_COMPLETION_CELLS),
+            "minimum_completion_gate": minimum_completion_gate,
+            "extended_completion_gate": extended_completion_gate,
             "c4_under_normal_path_budget": c4_under_budget,
             "c4_visual_tokens_less_than_c3": c4_reduces_visual,
             "has_actual_adapter_execution": has_actual_adapter,
