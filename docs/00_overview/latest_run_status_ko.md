@@ -32,31 +32,37 @@ trained_lora_evaluation_available: false
 measured_multi_specialist_swap_available: false
 
 local_only_reference_runs:
+  - .local/runs/20260524T080046Z-3090_two_track_pilot
   - .local/runs/20260524T072015Z-3090_two_track_pilot
   - .local/runs/20260524T062952Z-3090_two_track_pilot
 ```
 
-최신 local-only run은 RTX 3090에서 Qwen3-VL-4B local snapshot을 실제 CUDA로 로드하고, `real_task_manifest`의 고해상도 실제 이미지에서 full/low-res/ROI visual path의 token, prefill, CUDA peak를 기록한 reproducibility/source-semantics closure다.
+최신 local-only run은 RTX 3090에서 Qwen3-VL-4B local snapshot을 실제 CUDA로 로드하고, `real_task_manifest`의 고해상도 실제 이미지에서 C0-C7 matrix, score source, fallback peak semantics, minimum/extended completion gate를 기록한 metric/gate semantics closure다.
 
-Git에 남긴 최신 요약문은 [docs/20_results/2026-05-24_reproducibility_source_semantics_closure_ko.md](../20_results/2026-05-24_reproducibility_source_semantics_closure_ko.md)이다.
+Git에 남긴 최신 요약문은 [docs/20_results/2026-05-24_metric_gate_semantics_closure_ko.md](../20_results/2026-05-24_metric_gate_semantics_closure_ko.md)이다.
 
 ```yaml
-latest_real_task_image_smoke:
-  run_id: "20260524T072015Z-3090_two_track_pilot"
-  runner_commit: "ba2029a"
-  schema_version: "3090.combined_validation_result.v0.2"
+latest_metric_gate_semantics_closure:
+  run_id: "20260524T080046Z-3090_two_track_pilot"
+  runner_commit: "a1a158a"
+  schema_version: "3090.combined_validation_result.v0.3"
   source_semantics_version: "v0.2"
-  samples: 2
+  samples: 1
   matrix_cells: [C0, C1, C2, C3, C4, C5, C6, C7]
   c0_full_visual_tokens_mean: 768.0
   c4_foveated_visual_tokens_mean: 296.0
   c4_visual_token_reduction_vs_c3: 0.614583
   c4_normal_path_peak_mb_mean: 8681.853
-  c4_controlled_fallback_peak_mb_mean: 8962.613
+  c4_controlled_fallback_peak_mb_conditional_mean: 8962.613
+  c4_controlled_fallback_peak_mb_all_samples_mean: 8962.613
+  c4_controlled_fallback_rate: 1.0
+  minimum_completion_gate: true
+  extended_completion_gate: true
   roi_source: "center_crop"
   image_source: "manifest.full_image_path"
   actual_image_execution: true
   task_score_source: "synthetic_proxy"
+  actual_task_score_available_rate: 0.0
 ```
 
 ## 3. 현재 claim level

@@ -26,6 +26,7 @@ do_not_commit_by_default:
 
 | Date | Brief | Run | Status |
 |---|---|---|---|
+| 2026-05-24 | [Metric/gate semantics closure](2026-05-24_metric_gate_semantics_closure_ko.md) | `20260524T080046Z-3090_two_track_pilot` | metric/gate semantics closure |
 | 2026-05-24 | [Reproducibility + source semantics closure](2026-05-24_reproducibility_source_semantics_closure_ko.md) | `20260524T072015Z-3090_two_track_pilot` | reproducibility/source-semantics closure |
 | 2026-05-24 | [Real-task image smoke](2026-05-24_real_task_image_smoke_ko.md) | `20260524T062952Z-3090_two_track_pilot` | memory/task-image smoke |
 
