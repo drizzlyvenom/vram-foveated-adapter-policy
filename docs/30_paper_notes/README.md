@@ -13,7 +13,7 @@ files:
   track_a_v2_reframe_ko.md:
     role: "Simula/Gemma teacher 기반 Track A v2 중심축 재정렬"
   track_a_v2_validation_milestones_ko.md:
-    role: "AdapterCard/Simula/compiler 기준 Track A v2 M0-M11 진단 폐쇄와 남은 gate"
+    role: "proxy-tainted M0-M11 폐기 기록과 no-proxy 재검증 gate"
 ```
 
-원칙은 간단하다. Track A를 중심축으로 두고, Track B는 visual evidence cost control 보조 모듈로만 쓴다. M0-M11은 진단 폐쇄로 닫혔지만, Gemma teacher JSON success, fully actual correct-vs-wrong/random certification, router utility, paper-ready performance claim은 실제 후속 run이 생기기 전까지 쓰지 않는다.
+원칙은 간단하다. Track A를 중심축으로 두되, proxy/estimate/fallback이 섞인 검증 결과는 쓰지 않는다. 기존 M0-M11 closure와 Track B result briefs는 `trashbin/proxy_result_quarantine_2026-05-25/`로 격리했으며, Gemma teacher JSON success, fully actual correct-vs-wrong/random certification, router utility, paper-ready performance claim은 no-proxy 후속 run 전까지 쓰지 않는다.

@@ -1,6 +1,6 @@
 # RTX 3090 Track A v2 검증 가이드라인
 
-Status: Track A v2 validation redesign guide
+Status: Track A v2 validation redesign guide / proxy results quarantined
 Target hardware: RTX 3090 24GB
 Purpose: Simula-compiled taxonomy LoRA bank가 저 VRAM vision specialist consolidation의 중심축이 될 수 있는지 검증한다.
 
@@ -25,26 +25,25 @@ full high-resolution visual context
 → controlled visual budget for Track A certification
 ```
 
-Track A v2는 여러 specialist model의 resident weight 문제와 specialist switching 문제를 LoRA bank certification 문제로 바꾼다. Track B는 visual token, KV/cache, prefill, activation cost를 낮추는 보조 입력 경로로 남긴다.
+Track A v2는 여러 specialist model의 resident weight 문제와 specialist switching 문제를 LoRA bank certification 문제로 바꾼다. Track B는 아이디어로 남기되, 기존 proxy-tainted 결과는 근거에서 제외한다.
 
 즉, 논문 질문은 “ROI가 좋은가?”가 아니라 “offline Simula loop가 adapter-sensitive LoRA bank를 컴파일하고 검증할 수 있는가?”다.
 
 ## 2. 왜 검증 구조를 바꾸는가
 
-기존 Stage 1+와 3090 결과는 Qwen3-VL-4B를 RTX 3090에서 실제로 돌려 RouteTrace, ROI source taxonomy, C0-C7 matrix, OCR detector path, actual PEFT load path를 닫은 점에서 의미가 있다. 그러나 외부 n=32와 multi-LoRA bank smoke에서 trained LoRA gain과 wrong-adapter damage가 관측되지 않았으므로, 현재 task/taxonomy는 adapter-sensitive하지 않다고 해석해야 한다.
+기존 Stage 1+와 3090 결과는 proxy/estimate/fallback이 섞여 있었으므로 2026-05-25에 검증 근거에서 폐기했다. 앞으로는 Qwen3-VL-4B real CUDA를 쓰더라도 source semantics에 proxy가 한 번이라도 들어간 결과는 결과 브리프에 남기지 않는다.
 
 따라서 기존 산출물은 다음으로 재분류한다.
 
 ```yaml
 existing_results_status:
-  keep_as:
-    - protocol_closure
-    - unified_route_trace_validation
-    - ROI/input-cost instrumentation
-    - fallback_quarantine_logging
-    - actual PEFT load and multi-adapter bank smoke
-    - negative evidence that current tasks are not adapter-sensitive
+  quarantined_to: "trashbin/proxy_result_quarantine_2026-05-25/"
+  keep_as_code_scaffold_only:
+    - route trace schema
+    - ROI/input-cost instrumentation code
+    - actual PEFT and adapter bank runner code
   do_not_use_as:
+    - validation_evidence
     - final_peak_vram_reduction_evidence
     - trained_lora_gain_evidence
     - multi_adapter_routing_utility_evidence
@@ -61,11 +60,11 @@ possible_on_3090:
   - correct-vs-wrong-vs-random adapter certification
   - taxonomy router top1/oracle comparison
   - base_after_load memory accounting
-  - shared backbone vs multi-specialist residency estimate
+  - shared backbone vs actual measured baseline
   - model swap latency vs LoRA switch latency smoke
   - low-res/fullres/FoveateR-style ROI visual token comparison
   - incremental visual peak measurement
-  - small LoRA or proxy adapter residency accounting
+  - small LoRA actual adapter residency accounting
   - taxonomy router path validation
   - fallback budget-tier logging
 ```
@@ -106,21 +105,21 @@ stage0_costsim:
   use_for: cost model and logging contract
 
 stage1_foveation_smoke:
-  status: supporting_visual_cost_control
-  use_for: controlled input budget for adapter certification
+  status: quarantined_proxy_tainted
+  use_for: code scaffold only until no-proxy rerun
 
 stage1plus_protocol:
-  status: exploratory_protocol_closure
-  use_for: RouteTrace, proxy router, fallback/quarantine instrumentation
+  status: quarantined_proxy_tainted
+  use_for: RouteTrace schema only
 
 external_n32_multi_lora:
-  status: negative_adapter_sensitivity_evidence
-  use_for: motivate adapter-sensitive task redesign
+  status: quarantined_proxy_tainted
+  use_for: no active claim
 
 track_a_v2_m0_m11:
-  status: diagnostic_closure_recorded
-  use_for: schema/runner/result-table scaffold and claim-boundary evidence
-  boundary: "Gemma teacher JSON, fully actual certification, router utility, paper-ready claim remain closed"
+  status: invalidated_proxy_tainted
+  use_for: schema/runner scaffold only
+  boundary: "previous result table is not evidence"
 
 lewm_jepa_graph_memory:
   status: future_or_ablation
@@ -130,7 +129,7 @@ lewm_jepa_graph_memory:
 ## 7. 최우선 수정 원칙
 
 1. README와 paper notes에서 Track A v2를 최상단에 둔다.
-2. Stage 1+와 Track B 결과는 supporting input-cost evidence로 표기한다.
+2. Stage 1+와 Track B 결과는 no-proxy 재검증 전까지 evidence로 표기하지 않는다.
 3. Gemma 4 26B는 teacher이며 runtime/certification authority가 아니라고 적는다.
 4. Simula는 offline LoRA curriculum/compiler loop로 둔다.
 5. memory metric은 resident memory와 visual incremental memory를 분리한다.

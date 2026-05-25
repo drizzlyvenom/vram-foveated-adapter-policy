@@ -1,6 +1,6 @@
 # Docs Index
 
-이 폴더는 active RTX 3090 / Track A v2 validation 문서를 목적별로 나눈다. 현재 논문 중심축은 `Simula-compiled taxonomy LoRA bank`이며, 기존 Track B 결과는 visual evidence cost control 보조 근거로 해석한다.
+이 폴더는 active RTX 3090 / Track A v2 validation 문서를 목적별로 나눈다. 현재 논문 중심축은 `Simula-compiled taxonomy LoRA bank`이지만, 2026-05-25 기준으로 proxy/estimate/fallback이 섞인 검증 결과는 모두 폐기하고 `trashbin/proxy_result_quarantine_2026-05-25/`로 옮겼다.
 
 ```text
 docs/
@@ -27,21 +27,6 @@ protocols:
 
 results:
   - docs/20_results/README.md
-  - docs/20_results/2026-05-25_track_a_v2_final_closure_ko.md
-  - docs/20_results/2026-05-25_track_a_v2_router_bank_closure_ko.md
-  - docs/20_results/2026-05-25_track_a_v2_certification_ko.md
-  - docs/20_results/2026-05-25_track_a_v2_single_lora_learns_ko.md
-  - docs/20_results/2026-05-25_track_a_v2_base_audit_ko.md
-  - docs/20_results/2026-05-25_track_a_v2_teacher_curriculum_brief_ko.md
-  - docs/20_results/2026-05-25_track_a_v2_dataset_brief_ko.md
-  - docs/20_results/2026-05-25_external_n32_multi_lora_backbone_ko.md
-  - docs/20_results/2026-05-24_unique64_stability_lora_peft_ko.md
-  - docs/20_results/2026-05-24_p1_answer_mask_ocr_stability_ko.md
-  - docs/20_results/2026-05-24_ocr_detector_trained_lora_smoke_ko.md
-  - docs/20_results/2026-05-24_real_task_image_smoke_ko.md
-  - docs/20_results/2026-05-24_reproducibility_source_semantics_closure_ko.md
-  - docs/20_results/2026-05-24_metric_gate_semantics_closure_ko.md
-  - docs/20_results/2026-05-24_scored_roi_swap_peft_validation_ko.md
 
 paper_notes:
   - docs/30_paper_notes/README.md
@@ -52,7 +37,7 @@ paper_notes:
   - docs/30_paper_notes/ablation_table_plan_ko.md
 ```
 
-원본 실행 산출물은 `.local/runs/`에 두고 Git에는 올리지 않는다. Git에는 재현 명령, 핵심 수치, gate 상태, source semantics, claim boundary를 담은 result brief만 남긴다.
+원본 실행 산출물은 `.local/runs/`에 두고 Git에는 올리지 않는다. 단, proxy/estimate/fallback이 한 번이라도 섞인 검증 결과는 active 결과로 보존하지 않는다.
 
 현재 문서 해석의 우선순위는 다음이다.
 
@@ -61,12 +46,13 @@ current_direction:
   main_axis: "Track A v2 / Simula-compiled taxonomy LoRA bank"
   teacher: "Gemma 4 26B as offline annotator and curriculum generator"
   compiler: "Simula as offline LoRA curriculum compiler"
-  support_axis: "Track B as visual evidence cost control"
-  latest_closure: "Track A v2 M0-M11 diagnostic closure recorded; promotion gate false"
+  support_axis: "Track B must be rerun under no-proxy result rules before it can be cited"
+  latest_closure: "previous M0-M11 diagnostic closure invalidated by proxy-tainted evidence"
+  quarantine: "trashbin/proxy_result_quarantine_2026-05-25/"
   next_focus:
-    - "Gemma runtime crash investigation"
-    - "actual base/correct/wrong/random certification"
-    - "scene_text/ui_screen LoRA extension"
+    - "actual-only base/correct/wrong/random certification"
+    - "Gemma teacher only after valid model JSON, no deterministic fallback"
+    - "no-proxy Track A rerun"
   closed_claims:
     - trained LoRA accuracy gain
     - multi-adapter routing utility

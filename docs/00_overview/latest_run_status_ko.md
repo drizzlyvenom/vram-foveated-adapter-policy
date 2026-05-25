@@ -1,7 +1,30 @@
 # Latest Run Status
 
-Status: local validation status note
+Status: proxy-tainted validation results quarantined
 Updated: 2026-05-25
+
+## 0.1 2026-05-25 Proxy Result Quarantine
+
+결과 해석 기준을 바꿨다. validation evidence에 proxy, mixed proxy, estimate, deterministic fallback이 한 번이라도 들어간 결과는 모두 폐기한다. 해당 결과 브리프와 로컬 raw run은 `trashbin/proxy_result_quarantine_2026-05-25/`로 옮겼다.
+
+```yaml
+active_result_rule:
+  reject_if_any:
+    - proxy
+    - mixed_proxy
+    - estimate_used_as_validation_evidence
+    - deterministic_fallback_teacher_annotation
+  quarantined_path: "trashbin/proxy_result_quarantine_2026-05-25/"
+  invalidated:
+    - "previous Track B/3090 validation result briefs"
+    - "previous Track A v2 M0-M11 diagnostic closure"
+    - "mixed-proxy AdapterCards"
+    - "proxy base audit / mixed certification / router eval"
+  retained_for_now:
+    - "code, schemas, scripts, and planning docs only"
+```
+
+아래의 과거 run 설명 중 proxy/estimate/fallback 결과를 인용한 부분은 역사적 맥락으로만 남기며, 더 이상 검증 근거로 쓰지 않는다.
 
 ## 0. 현재 방향성
 
@@ -17,45 +40,45 @@ main_axis:
 support_axis:
   name: "Track B visual evidence cost control"
   use_for:
-    - "ROI/input compression baseline"
-    - "adapter certification의 controlled visual budget"
+    - "no-proxy 재검증 이후에만 ROI/input compression baseline"
+    - "no-proxy 재검증 이후에만 adapter certification의 controlled visual budget"
   do_not_use_for:
     - "main paper novelty claim"
     - "OCR ROI broad benchmark generalization"
 ```
 
-기존 3090 결과는 폐기하지 않는다. 다만 현재 해석은 다음으로 바꾼다.
+기존 3090/Track A v2 closure 결과는 proxy-tainted evidence가 섞였으므로 폐기한다.
 
 ```yaml
 current_interpretation:
-  track_b_results: "supporting input-cost evidence"
-  external_n32_lora_no_gain: "negative evidence that current task/taxonomy is not adapter-sensitive"
-  multi_lora_wrong_damage_zero: "motivation for adapter-sensitive dataset redesign"
-  latest_track_a_v2_closure: "M0-M11 diagnostic closure recorded; promotion gate remains false"
-  next_gate: "replace proxy certification pieces with actual measured base/correct/wrong/random comparisons"
+  track_b_results: "quarantined_until_no_proxy_rerun"
+  external_n32_lora_no_gain: "quarantined_due_proxy_tainted_config"
+  multi_lora_wrong_damage_zero: "actual bank smoke may be re-summarized separately, but mixed result brief was quarantined"
+  latest_track_a_v2_closure: "invalidated_due_proxy_and_fallback_evidence"
+  next_gate: "strict actual-only base/correct/wrong/random comparisons"
 ```
 
 최신 Track A v2 마일스톤 상태는 다음처럼 읽는다.
 
 ```yaml
-track_a_v2_milestone_closure:
+track_a_v2_milestone_status:
   canonical_milestone_doc: "docs/30_paper_notes/track_a_v2_validation_milestones_ko.md"
-  canonical_result_brief: "docs/20_results/2026-05-25_track_a_v2_final_closure_ko.md"
-  closure_meaning: "실행 산출물과 pass/fail/claim boundary를 기록한 진단 폐쇄"
+  previous_result_brief: "quarantined: docs/20_results/2026-05-25_track_a_v2_final_closure_ko.md"
+  closure_meaning: "previous diagnostic closure is invalidated as evidence"
   promotion_gate: false
   status:
     M0_reframe_lock: closed
     M1_schema_registry: closed
     M2_adapter_sensitive_dataset: closed
-    M3_simula_teacher_compiler: closed_with_fallback
-    M4_base_difficulty_audit: closed_as_proxy
-    M5_single_lora_learns: closed
-    M6_correct_beats_wrong: closed_as_mixed_evidence
-    M7_adaptercard_certification: closed
-    M8_taxonomy_router: closed_as_path
-    M9_multi_adapter_bank: closed
-    M10_compatibility_collapse: closed_as_smoke
-    M11_paper_ready_table: closed_negative
+    M3_simula_teacher_compiler: invalidated_fallback
+    M4_base_difficulty_audit: invalidated_proxy
+    M5_single_lora_learns: quarantined_with_historical_run_cycle
+    M6_correct_beats_wrong: invalidated_mixed_proxy
+    M7_adaptercard_certification: invalidated_mixed_proxy
+    M8_taxonomy_router: invalidated_due_proxy_certification
+    M9_multi_adapter_bank: requires_actual_only_resummary
+    M10_compatibility_collapse: requires_actual_only_resummary
+    M11_paper_ready_table: invalidated
 ```
 
 ## 1. 현재 커밋된 상태
@@ -139,9 +162,7 @@ local_only_reference_runs:
   - .local/runs/20260524T062952Z-3090_two_track_pilot
 ```
 
-최신 local-only run 묶음은 RTX 3090에서 Qwen3-VL-4B local snapshot을 실제 CUDA로 로드하고, `tiny_scored_manifest`의 controlled image task에서 ROI source별 C0-C7 matrix, normalized answer match score, p95 memory/token fields를 기록한 M-B~M-F initial measured validation pass다. 같은 커밋에서 sequential specialist swap baseline smoke와 actual PEFT attach smoke도 기록했다.
-
-Git에 남긴 최신 요약문은 [docs/20_results/2026-05-24_scored_roi_swap_peft_validation_ko.md](../20_results/2026-05-24_scored_roi_swap_peft_validation_ko.md)이다.
+아래 local-only run 묶음은 과거 기록이다. 2026-05-25 proxy quarantine 이후에는 검증 근거로 쓰지 않는다. 해당 요약문은 `trashbin/proxy_result_quarantine_2026-05-25/`로 옮겼다.
 
 ```yaml
 latest_scored_roi_validation:
@@ -213,7 +234,7 @@ P1 follow-up에서는 answer-only label masking을 기본값으로 바꾸고, �
 
 ```yaml
 p1_answer_mask_and_ocr_stability:
-  result_brief: "docs/20_results/2026-05-24_p1_answer_mask_ocr_stability_ko.md"
+  result_brief: "quarantined: docs/20_results/2026-05-24_p1_answer_mask_ocr_stability_ko.md"
   answer_only_lora_train_run: "20260524T105236Z-tiny_lora_train"
   answer_only_label_mask: true
   supervised_token_count_mean: 6.0
@@ -255,7 +276,7 @@ p1_answer_mask_and_ocr_stability:
 
 ```yaml
 unique64_stability_lora_peft:
-  result_brief: "docs/20_results/2026-05-24_unique64_stability_lora_peft_ko.md"
+  result_brief: "quarantined: docs/20_results/2026-05-24_unique64_stability_lora_peft_ko.md"
   manifest_samples: 64
   manifest_domain_distribution:
     document_or_receipt: 16
@@ -298,11 +319,11 @@ unique64_stability_lora_peft:
   actual_peft_adapter_memory_source: "actual_loaded_adapter"
 ```
 
-2026-05-25 follow-up에서는 남아 있던 external n=32, baseline-vs-trained, multi-LoRA bank, lightweight backbone sweep를 작은 실측 단위로 닫았다. Git에 남기는 최신 요약문은 [docs/20_results/2026-05-25_external_n32_multi_lora_backbone_ko.md](../20_results/2026-05-25_external_n32_multi_lora_backbone_ko.md)이다.
+2026-05-25 follow-up에서는 남아 있던 external n=32, baseline-vs-trained, multi-LoRA bank, lightweight backbone sweep를 작은 단위로 닫았지만, config와 결과 묶음에 proxy/estimate가 섞여 검증 근거에서 폐기했다. 해당 요약문은 `trashbin/proxy_result_quarantine_2026-05-25/`로 옮겼다.
 
 ```yaml
 external_n32_multi_lora_backbone:
-  result_brief: "docs/20_results/2026-05-25_external_n32_multi_lora_backbone_ko.md"
+  result_brief: "quarantined: docs/20_results/2026-05-25_external_n32_multi_lora_backbone_ko.md"
   external_manifest: ".local/data/external_tiny_manifest/manifest.jsonl"
   external_manifest_samples: 64
   external_manifest_sources:
@@ -453,13 +474,13 @@ repeated_issue_audit:
     current_evidence: "src/vfa_policy/core/validation_matrix.py DEFAULT_CELLS includes C0-C7"
   smoke_vs_promotion_claims:
     verdict: "real_risk"
-    current_action: "path smoke, diagnostic measurement, promotion claim을 문서에서 분리"
+    current_action: "proxy-tainted path smoke와 diagnostic measurement를 결과 근거에서 폐기"
   controlled_tiny_overclaim:
     verdict: "real_risk"
     current_action: "controlled tiny scored diagnostic set으로만 표현"
   roi_source_claim_drift:
     verdict: "real_risk"
-    current_action: "center/oracle/layout_proxy/ocr_detector source taxonomy 유지"
+    current_action: "layout_proxy 포함 결과 폐기, no-proxy ROI taxonomy로 재작성 필요"
   peft_path_vs_lora_gain:
     verdict: "real_risk"
     current_action: "actual PEFT load path와 accuracy gain을 분리"
@@ -473,78 +494,53 @@ repeated_issue_audit:
 
 ## 5. 다음 승격 조건
 
-다음 단계는 방어 문구를 더 붙이는 것이 아니라, proxy를 실제 실험으로 하나씩 교체하는 것이다.
+다음 단계는 방어 문구를 더 붙이는 것이 아니라, proxy가 섞인 결과를 다시 쓰지 않는 것이다.
 
 ```yaml
 next_promotion_steps:
-  - fix Gemma GGUF/mmproj llama.cpp runtime crash before claiming actual teacher annotation
-  - replace proxy base/wrong/random certification scores with actual measured comparisons
-  - extend actual LoRA training from document/chart to scene_text/ui_screen
+  - valid teacher JSON without deterministic fallback
+  - actual-only base/correct/wrong/random certification scores
+  - actual-only adapter bank switching summary
   - compare fully actual base/correct/wrong/random adapters before claiming any LoRA utility
   - keep trained LoRA accuracy-gain and multi-adapter routing utility claims closed until the new gates pass
-  - keep Track B as visual evidence cost control, not as the main contribution
+  - keep Track B out of evidence until no-proxy rerun
 ```
 
 리서치 메모의 `다음에 뭘 더 검증하면 좋을까` 항목은 아래 queue로 정리한다.
 
 ```yaml
 next_validation_queue:
-  - "Gemma 4 26B teacher annotation은 후보 label로만 쓰고, heldout certification으로 검증"
-  - "Gemma GGUF/mmproj llama.cpp runtime crash 원인 확인"
-  - "base/wrong/random proxy score를 actual measured comparison으로 교체"
+  - "Gemma 4 26B 또는 대체 teacher가 valid JSON을 실제로 출력하는지 확인"
+  - "fallback annotation 없이 curriculum 생성"
+  - "base/wrong/random score는 actual measured comparison만 허용"
   - "adapter-specific task design으로 wrong-adapter damage가 실제로 드러나는지 확인"
-  - "trained LoRA accuracy gain claim은 현재 no-gain이므로 계속 닫아둠"
-  - "multi-trained-LoRA bank path는 닫혔지만 wrong-adapter damage가 0.0이라 utility claim은 닫아둠"
-  - "Qwen2-VL-2B 1개 후보 sweep은 참고 결과로 두고, runtime backbone sweep은 Track A gate 이후로 미룸"
+  - "proxy-tainted old result는 참고 결과로도 쓰지 않음"
 ```
 
 ## 6. 최종 체크리스트
 
 ```yaml
-closed_for_current_milestone:
+retained_after_proxy_quarantine:
   - Track A v2 research reframe
-  - two-track historical diagnostics
   - active docs structure
   - local artifact boundary
   - result brief workflow
-  - real CUDA memory/token accounting
   - DEFAULT_CELLS C0-C7 and minimum/extended completion gates
-  - tiny scored normalized answer match
-  - ROI source comparison
-  - RapidOCR detector smoke
-  - sequential specialist swap smoke
-  - actual PEFT attach smoke
-  - tiny trained LoRA save/load smoke
-  - C6 low-res and C7 controlled fallback reporting in result briefs
-  - answer-only LoRA label mask smoke
-  - OCR detector n=16 C0-C7 stability smoke
-  - OCR detector n=32 cyclic C0-C7 stability smoke
-  - 64 unique controlled tiny manifest with train/holdout split
-  - OCR detector 64/64 manifest generation
-  - ROI source stability repeats=3 over 64 unique samples
-  - answer-only LoRA 32-step train/holdout evaluation
-  - trained adapter actual PEFT C0/C3/C4/C5/C6/C7 diagnostic matrix
-  - external tiny manifest 64 samples
-  - external OCR detector primary n=32 balanced manifest
-  - external n=32 Qwen3 reference diagnostic
-  - external n=32 actual PEFT baseline-vs-trained comparison
-  - four domain-specific trained LoRA adapters
-  - multi-trained-LoRA bank load/switch smoke
-  - Qwen2-VL-2B lightweight backbone sweep
   - Track A v2 AdapterCard schema/checker examples
-  - Track A v2 256-sample adapter-sensitive manifest
-  - Gemma teacher runtime attempt with deterministic fallback annotations
-  - Simula curriculum manifest compile path
-  - Track A v2 base difficulty proxy audit
-  - document/chart actual LoRA train/holdout evaluation
-  - AdapterCard certification records with mixed/proxy boundary
-  - taxonomy router path evaluation
-  - Track A v2 final M0-M11 diagnostic closure table
+  - no active result brief remains
+
+quarantined_for_current_milestone:
+  - all proxy/estimate/fallback 3090 validation result briefs
+  - previous Track A v2 M0-M11 final closure brief
+  - mixed-proxy AdapterCards
+  - track_a_v2_base_audit
+  - track_a_v2_certification
+  - track_a_v2_router_eval
 
 needs_next:
-  - fix Gemma GGUF/mmproj llama.cpp runtime crash before claiming actual teacher annotation
-  - replace proxy base/wrong/random certification scores with actual measured comparisons
-  - extend actual LoRA training from document/chart to scene_text/ui_screen
+  - valid teacher output without fallback
+  - actual-only base/correct/wrong/random certification
+  - actual-only adapter bank resummary
   - router-selects-adapter utility only after actual correct-vs-wrong/random margin
   - production p95/p99 only after serving harness exists
 ```

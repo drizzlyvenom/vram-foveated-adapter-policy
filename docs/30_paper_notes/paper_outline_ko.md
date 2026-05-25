@@ -1,6 +1,6 @@
 # 소논문 Outline 초안
 
-Status: Track A v2 working outline
+Status: Track A v2 working outline / proxy results quarantined
 
 ## 1. 중심 문장
 
@@ -37,18 +37,14 @@ diagnostic_setup:
   - normalized answer matching plus base/correct/wrong/random comparison
 
 results:
-  - existing result recap: Track B support and Track A path smoke
-  - negative result: external n32 trained LoRA no gain
-  - negative result: multi-LoRA bank wrong-adapter damage 0.0
-  - Track A v2 M0-M11 diagnostic closure table
+  - proxy-tainted historical results are quarantined and cannot be cited
+  - retained setup recap: schema and runner scaffold only
   - new target table: fully actual AdapterCard certification gates
 
 limitations:
   - controlled tiny set, not broad benchmark
   - Gemma teacher labels are candidates, not final ground truth
-  - current LoRA results do not show accuracy gain
-  - current taxonomy/tasks are not adapter-sensitive enough
-  - ROI/OCR results are visual-cost support, not main novelty
+  - previous LoRA/ROI/OCR validation briefs used proxy-tainted evidence and were discarded
   - Qwen3-VL-4B is a reference backbone, not a lightweight target sweep
   - production p95/p99 out of scope
 
@@ -59,9 +55,9 @@ closed_scaffold:
   - base/correct/wrong/random certification runner
 
 next_work:
-  - fix Gemma GGUF/mmproj runtime crash before claiming teacher JSON evidence
-  - replace proxy base/wrong/random certification scores with actual measured comparisons
-  - train/evaluate scene_text and ui_screen adapters
+  - valid teacher JSON without deterministic fallback before claiming teacher evidence
+  - actual-only base/correct/wrong/random certification scores
+  - train/evaluate adapters under no-proxy scoring rules
   - router gate only after actual correct beats wrong/random
 ```
 
@@ -87,3 +83,5 @@ backbone_roles:
 ```text
 We present a measurement-first plan for consolidating vision specialists on a shared VLM backbone under a low-VRAM budget. The central mechanism is an offline Simula loop that compiles failure traces into taxonomy-specific LoRA curricula. A Gemma 4 26B teacher proposes annotations, hard negatives, and expected answers, but adapter certification is decided by base/correct/wrong/random comparisons on held-out adapter-sensitive tasks. Existing RTX 3090 diagnostics show that the PEFT load path and multi-adapter bank path work, while current tasks do not yet produce trained-LoRA gain or wrong-adapter damage. We therefore use those negative results to motivate AdapterCard v2 certification and keep foveated ROI evidence as an input-cost control module rather than the main contribution.
 ```
+
+위 abstract 재료는 proxy quarantine 이전 초안이다. no-proxy 재검증 전까지 결과 문장으로 사용하지 않는다.

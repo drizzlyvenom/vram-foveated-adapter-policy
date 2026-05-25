@@ -1,34 +1,35 @@
 # Track A v2 검증 마일스톤
 
-Status: M0-M11 diagnostic closure recorded / promotion gate closed
+Status: previous proxy-tainted closure invalidated / no-proxy rerun required
 Date: 2026-05-25
 Last updated: 2026-05-25
 Scope: Simula-compiled taxonomy LoRA bank / Track A 중심 재정렬
 Recommended repo path: `docs/30_paper_notes/track_a_v2_validation_milestones_ko.md`
 
-Closure update: 2026-05-25
+Proxy quarantine update: 2026-05-25
 
 ```yaml
-closure_meaning: "각 마일스톤의 실행 산출물과 pass/fail/claim boundary를 기록했다는 뜻이며, paper-ready 성능 claim을 열었다는 뜻은 아니다."
+closure_meaning: "이전 M0-M11 진단 폐쇄는 proxy/mixed/estimate/fallback evidence가 섞여 검증 근거에서 폐기한다."
+quarantined_path: "trashbin/proxy_result_quarantine_2026-05-25/"
 closure_status:
   M0: closed
   M1: closed
   M2: closed
-  M3: closed_with_fallback
-  M4: closed_as_proxy
-  M5: closed
-  M6: closed_as_mixed_evidence
-  M7: closed
-  M8: closed_as_path
-  M9: closed
-  M10: closed_as_smoke
-  M11: closed_negative
+  M3: invalidated_fallback
+  M4: invalidated_proxy
+  M5: retained_actual_only_brief_but_not_promotion
+  M6: invalidated_mixed_proxy
+  M7: invalidated_mixed_proxy
+  M8: invalidated_due_proxy_certification
+  M9: requires_actual_only_resummary
+  M10: requires_actual_only_resummary
+  M11: invalidated
 promotion_gate: false
-canonical_result_brief: "docs/20_results/2026-05-25_track_a_v2_final_closure_ko.md"
+previous_result_brief: "quarantined: docs/20_results/2026-05-25_track_a_v2_final_closure_ko.md"
 next_focus:
-  - "Gemma GGUF/mmproj runtime crash 원인 확인"
-  - "proxy base/wrong/random 점수를 actual measured comparison으로 교체"
-  - "scene_text/ui_screen actual LoRA training 확장"
+  - "no-proxy teacher/curriculum path"
+  - "actual base/correct/wrong/random scoring only"
+  - "actual adapter bank resummary without proxy-tainted configs"
 ```
 
 ---
@@ -818,12 +819,39 @@ and certified LoRA adapters can be selected by taxonomy on a shared VLM backbone
 ```
 
 현재는 이 문장을 주장할 준비가 되지 않았다.
-M0-M11은 진단 폐쇄로 닫혔고, 다음 phase는 proxy를 actual certification evidence로 교체하는 단계다.
+이전 M0-M11 진단 폐쇄 결과는 proxy-tainted evidence가 섞여 폐기했다. 다음 phase는 no-proxy evidence만으로 teacher/curriculum/certification을 다시 닫는 단계다.
 
-## 17. 2026-05-25 Closure Record
+## 17. 2026-05-25 Proxy Quarantine Record
 
 ```yaml
-closed_outputs:
+quarantined_outputs:
+  trashbin_path: "trashbin/proxy_result_quarantine_2026-05-25/"
+  reason: "proxy, mixed proxy, estimate, or deterministic fallback was used as validation evidence"
+  result_briefs:
+    - "docs/20_results/2026-05-24_metric_gate_semantics_closure_ko.md"
+    - "docs/20_results/2026-05-24_ocr_detector_trained_lora_smoke_ko.md"
+    - "docs/20_results/2026-05-24_p1_answer_mask_ocr_stability_ko.md"
+    - "docs/20_results/2026-05-24_real_task_image_smoke_ko.md"
+    - "docs/20_results/2026-05-24_reproducibility_source_semantics_closure_ko.md"
+    - "docs/20_results/2026-05-24_scored_roi_swap_peft_validation_ko.md"
+    - "docs/20_results/2026-05-24_unique64_stability_lora_peft_ko.md"
+    - "docs/20_results/2026-05-25_external_n32_multi_lora_backbone_ko.md"
+    - "docs/20_results/2026-05-25_track_a_v2_base_audit_ko.md"
+    - "docs/20_results/2026-05-25_track_a_v2_certification_ko.md"
+    - "docs/20_results/2026-05-25_track_a_v2_final_closure_ko.md"
+    - "docs/20_results/2026-05-25_track_a_v2_router_bank_closure_ko.md"
+    - "docs/20_results/2026-05-25_track_a_v2_teacher_curriculum_brief_ko.md"
+  adapter_cards:
+    - "configs/track_a_v2/adapter_cards/document_track_a_v2_r4_v1.yaml"
+    - "configs/track_a_v2/adapter_cards/chart_track_a_v2_r4_v1.yaml"
+  local_raw_runs:
+    - ".local/runs/*-3090_*"
+    - ".local/runs/*-specialist_swap_smoke"
+    - ".local/runs/track_a_v2_base_audit"
+    - ".local/runs/track_a_v2_certification"
+    - ".local/runs/track_a_v2_router_eval"
+
+retained_scaffold:
   schemas:
     - "schemas/track_a_v2/adapter_card_v2.example.yaml"
     - "schemas/track_a_v2/curriculum_manifest.example.jsonl"
@@ -839,13 +867,13 @@ closed_outputs:
     - "scripts/train_track_a_v2_lora.py"
     - "scripts/run_track_a_v2_certification.py"
     - "scripts/run_track_a_v2_router_eval.py"
-  result_brief:
-    - "docs/20_results/2026-05-25_track_a_v2_final_closure_ko.md"
+  result_briefs:
+    - "none"
 
 important_boundary:
-  gemma_teacher_json: "failed; llama.cpp exited 3221226505, deterministic fallback used"
-  base_audit: "deterministic proxy, not actual Qwen base accuracy"
-  certification: "correct LoRA scores actual, base/wrong/random mixed proxy"
+  gemma_teacher_json: "invalidated until valid model JSON exists without deterministic fallback"
+  base_audit: "invalidated because it used deterministic proxy"
+  certification: "invalidated because base/wrong/random were mixed proxy"
   router_utility_claim: false
   paper_ready_claim: false
 
@@ -854,16 +882,15 @@ docs_synced:
   - "docs/README.md"
   - "docs/00_overview/latest_run_status_ko.md"
   - "docs/20_results/README.md"
-  - "docs/20_results/2026-05-25_track_a_v2_final_closure_ko.md"
   - "docs/30_paper_notes/claim_table_ko.md"
   - "docs/30_paper_notes/ablation_table_plan_ko.md"
   - "docs/30_paper_notes/paper_outline_ko.md"
   - "docs/30_paper_notes/track_a_v2_reframe_ko.md"
 
 needs_next:
-  - "fix Gemma GGUF/mmproj llama.cpp runtime crash before claiming actual teacher annotation"
-  - "replace proxy base/wrong/random certification scores with actual measured comparisons"
-  - "extend actual LoRA training from document/chart to scene_text/ui_screen"
+  - "valid Gemma or replacement teacher JSON without deterministic fallback"
+  - "actual base/correct/wrong/random certification scores only"
+  - "actual adapter bank switching summary without proxy-tainted configs"
   - "router-selects-adapter utility only after actual correct-vs-wrong/random margin"
   - "production p95/p99 only after serving harness exists"
 ```

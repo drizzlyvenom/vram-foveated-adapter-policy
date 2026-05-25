@@ -27,7 +27,7 @@ Track B support:
   visual evidence cost control / ROI compression baseline
 ```
 
-지금까지의 Track B 실험은 버리지 않는다. 다만 더 키우지 않고, Track A 실험에서 입력 비용을 통제하는 보조 모듈로 둔다.
+지금까지의 Track B 실험 중 proxy/estimate/fallback이 섞인 검증 결과는 버린다. Track B 자체는 아이디어로 보존하되, no-proxy 재검증 전까지 입력 비용 통제 근거로도 쓰지 않는다.
 
 ## 1. 어디서 꼬였는가
 
@@ -58,7 +58,7 @@ track_b_evidence:
   - external n32 OCR ROI diagnostic
 ```
 
-반대로 Track A는 path smoke와 negative result가 중심이다.
+반대로 Track A는 path smoke와 negative result가 중심이었지만, proxy-tainted 결과는 2026-05-25에 격리했다.
 
 ```yaml
 track_a_current_evidence:
@@ -73,7 +73,7 @@ track_a_current_evidence:
     - correct adapter와 wrong adapter score 차이 없음
 ```
 
-이 negative result는 실패가 아니라 진단이다.
+이 negative result 해석도 proxy quarantine 이후에는 보류한다. no-proxy 재검증으로 같은 방향이 다시 나오기 전까지 논문 근거로 쓰지 않는다.
 
 ```text
 현재 task와 taxonomy는 adapter-sensitive하지 않다.
@@ -380,13 +380,13 @@ closed:
   - AdapterCard v2 schema
   - Simula curriculum manifest schema
   - adapter-sensitive manifest generator
-  - Gemma teacher runner with deterministic fallback boundary
-  - base audit / LoRA train / certification / router runners
-  - M0-M11 diagnostic closure table
+  - Gemma teacher runner scaffold
+  - base audit / LoRA train / certification / router runner scaffold
+  - proxy-tainted M0-M11 diagnostic closure quarantined
 
 next:
-  - fix Gemma GGUF/mmproj llama.cpp runtime crash
-  - replace proxy base/wrong/random certification with actual measured comparisons
+  - valid Gemma or replacement teacher output without deterministic fallback
+  - actual-only base/correct/wrong/random certification
   - extend actual LoRA training to scene_text and ui_screen
   - reopen router utility only after actual correct-vs-wrong/random margin
 ```
@@ -432,7 +432,7 @@ contributions:
   C4_supporting:
     title: "Foveated evidence as input-cost control"
     content:
-      - "Track B는 adapter certification의 visual evidence budget을 통제하는 보조 모듈"
+      - "Track B는 no-proxy 재검증 전까지 결과 근거로 쓰지 않음"
 ```
 
 ## 13. 현재 표현 원칙
@@ -440,9 +440,9 @@ contributions:
 ```yaml
 say:
   - "Track A is the main research axis."
-  - "Track B is a supporting input-cost control module."
-  - "Current Track A results close the diagnostic scaffold, not the promotion claim."
-  - "The next goal is fully actual adapter-sensitive certification."
+  - "Proxy-tainted validation results were quarantined."
+  - "Current Track A code is scaffold only, not promotion evidence."
+  - "The next goal is strict no-proxy adapter-sensitive certification."
 
 do_not_say:
   - "Track B is the main contribution."

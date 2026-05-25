@@ -1,6 +1,13 @@
 # VRAM-Constrained Adapter Policy
 
-이 프로젝트는 low-VRAM vision specialist를 하나의 shared VLM backbone 위에 통합하기 위한 연구 작업 폴더입니다. 현재 논문 중심축은 **Track A v2: Simula-compiled taxonomy LoRA bank**입니다. Track B의 foveated/ROI 경로는 버리지 않지만, 메인 기여가 아니라 adapter certification에서 visual evidence cost를 통제하는 보조 모듈로 둡니다.
+Status: Legacy archive
+Date: 2026-05-25
+
+이 레포지토리는 이제 **Legacy 보관용 작업 폴더**입니다. 새 실험과 논문용 검증은 새 레포지토리에서 다시 시작합니다.
+
+이곳의 문서, 설정, 결과 브리프는 기존 방향성과 시행착오를 추적하기 위한 기록으로만 남깁니다. 특히 2026-05-25 기준으로 proxy/estimate/fallback이 한 번이라도 섞인 검증 결과는 폐기하고 `trashbin/proxy_result_quarantine_2026-05-25/`로 옮겼습니다. 따라서 이 레포지토리의 이전 검증 결과는 새 프로젝트의 성능 근거로 인용하지 않습니다.
+
+원래 목표는 low-VRAM vision specialist를 하나의 shared VLM backbone 위에 통합하기 위한 연구 작업이었습니다. 마지막 작업 축은 **Track A v2: Simula-compiled taxonomy LoRA bank**였지만, 이 축도 새 레포지토리에서 no-proxy 기준으로 재설계해야 합니다.
 
 ```text
 Track A v2. Simula-compiled taxonomy LoRA bank
@@ -22,14 +29,13 @@ Track B support. Visual evidence cost control
 - Gemma 4 26B는 runtime model이 아니라 teacher/annotator/curriculum generator다.
 - Simula는 runtime reasoner가 아니라 offline LoRA curriculum/compiler loop다.
 - LoRA gain이나 routing utility는 `base / correct / wrong / random` certification gate를 통과하기 전까지 주장하지 않는다.
-- Track B는 ROI/input compression baseline과 visual evidence budget control로만 쓴다.
-- 기존 Track B 결과는 폐기하지 않고, adapter certification의 입력 비용 통제 근거로 재해석한다.
+- Track B는 no-proxy 재검증 전까지 결과 근거로 쓰지 않는다.
+- 기존 proxy-tainted Track B/Track A closure 결과는 폐기한다.
 
 ## 현재 핵심 문서
 
 - Track A v2 reframe: `docs/30_paper_notes/track_a_v2_reframe_ko.md`
 - Track A v2 validation milestones: `docs/30_paper_notes/track_a_v2_validation_milestones_ko.md`
-- Track A v2 final closure brief: `docs/20_results/2026-05-25_track_a_v2_final_closure_ko.md`
 - 3090 validation guideline: `docs/00_overview/3090_two_track_validation_guideline_ko.md`
 - docs index: `docs/README.md`
 - latest local run status: `docs/00_overview/latest_run_status_ko.md`
@@ -45,7 +51,6 @@ Track B support. Visual evidence cost control
 - 3090 actual PEFT matrix smoke config: `configs/3090/tiny_scored_actual_peft_matrix_smoke.yaml`
 - 3090 trained LoRA full C-matrix config: `configs/3090/tiny_scored_trained_lora_full_cmatrix.yaml`
 - 3090 adapter cards: `configs/3090/adapter_cards.yaml`
-- Track A v2 adapter cards: `configs/track_a_v2/adapter_cards/`
 - 3090 result schemas: `schemas/3090/residency_trace.example.yaml`, `schemas/3090/combined_validation_result.example.yaml`
 - Track A v2 schemas: `schemas/track_a_v2/`
 - paper notes: `docs/30_paper_notes/`
@@ -82,79 +87,14 @@ Legacy/source_bundles/vfa_3090_two_track_validation_docs/
 
 ## 실행 참고
 
-기존 3090 diagnostic scaffold:
-
-```powershell
-python scripts\run_3090_two_track_validation.py --config configs\3090\two_track_pilot.yaml --dry-run
-```
-
-RTX 3090 real CUDA memory-accounting smoke:
-
-```powershell
-.venv\Scripts\python.exe scripts\run_3090_two_track_validation.py --config configs\3090\two_track_pilot.yaml --real-run --max-samples 4 --max-new-tokens 4
-```
-
-Real-task image smoke:
-
-```powershell
-python scripts\prepare_real_task_manifest.py --source picsum_highres --max-samples 4
-.venv\Scripts\python.exe scripts\run_3090_two_track_validation.py --config configs\3090\two_track_pilot.yaml --real-run --data-mode real_task_manifest --manifest .local\data\real_task_smoke\manifest.jsonl --max-samples 2 --max-new-tokens 4
-```
-
-Tiny scored ROI source comparison:
-
-```powershell
-.venv\Scripts\python.exe scripts\prepare_tiny_scored_manifest.py --max-samples 64
-.venv\Scripts\python.exe scripts\run_3090_two_track_validation.py --config configs\3090\tiny_scored_validation.yaml --real-run --max-samples 16 --roi-source center_crop --max-new-tokens 8
-.venv\Scripts\python.exe scripts\run_3090_two_track_validation.py --config configs\3090\tiny_scored_validation.yaml --real-run --max-samples 16 --roi-source oracle_box --max-new-tokens 8
-.venv\Scripts\python.exe scripts\run_3090_two_track_validation.py --config configs\3090\tiny_scored_validation.yaml --real-run --max-samples 16 --roi-source layout_proxy_box --max-new-tokens 8
-```
-
-Optional OCR detector ROI manifest:
-
-```powershell
-.venv\Scripts\python.exe -m pip install -r requirements-ocr.txt
-.venv\Scripts\python.exe scripts\prepare_ocr_detector_manifest.py --input .local\data\tiny_scored_manifest\manifest.jsonl --output .local\data\tiny_scored_manifest\manifest_ocr_detector.jsonl --engine rapidocr
-.venv\Scripts\python.exe scripts\run_3090_two_track_validation.py --config configs\3090\tiny_scored_ocr_detector.yaml --real-run --max-samples 16 --max-new-tokens 8
-```
-
-Sequential specialist swap와 actual PEFT attach smoke:
-
-```powershell
-.venv\Scripts\python.exe scripts\run_specialist_swap_smoke.py --config configs\3090\tiny_scored_validation.yaml --repeats 3
-.venv\Scripts\python.exe scripts\run_actual_peft_smoke.py --config configs\3090\tiny_scored_validation.yaml --rank 4 --alpha 8
-.venv\Scripts\python.exe scripts\run_3090_two_track_validation.py --config configs\3090\tiny_scored_actual_peft_matrix_smoke.yaml --real-run --max-samples 4 --max-new-tokens 8
-```
-
-Tiny trained LoRA smoke:
-
-```powershell
-.venv\Scripts\python.exe scripts\train_tiny_lora_smoke.py --manifest .local\data\tiny_scored_manifest\manifest_ocr_detector.jsonl --roi-source ocr_detector_box --max-samples 32 --max-steps 32 --eval-train-samples 32 --eval-holdout-samples 32 --eval-max-new-tokens 8 --rank 4 --alpha 8 --learning-rate 1e-4 --label-mask-mode answer_only
-.venv\Scripts\python.exe scripts\run_3090_two_track_validation.py --config configs\3090\tiny_scored_trained_lora_full_cmatrix.yaml --real-run --max-samples 64 --max-new-tokens 8
-```
-
-Track A v2 diagnostic closure path:
+현재 검증 재실행 규칙은 단순합니다. validation evidence에 proxy, mixed proxy, estimate, deterministic fallback이 한 번이라도 들어가면 그 결과는 폐기합니다.
 
 ```powershell
 .venv\Scripts\python.exe scripts\check_track_a_v2_schemas.py
 .venv\Scripts\python.exe scripts\prepare_adapter_sensitive_manifest.py --samples-per-taxonomy-split 32 --output .local\data\track_a_v2_adapter_sensitive\manifest.jsonl
-.venv\Scripts\python.exe scripts\run_gemma_teacher_gguf.py --manifest .local\data\track_a_v2_adapter_sensitive\manifest.jsonl --output .local\data\track_a_v2_adapter_sensitive\teacher_annotations.jsonl --max-per-taxonomy 1 --allow-deterministic-fallback
-.venv\Scripts\python.exe scripts\compile_simula_curriculum.py --manifest .local\data\track_a_v2_adapter_sensitive\manifest.jsonl --teacher-annotations .local\data\track_a_v2_adapter_sensitive\teacher_annotations.jsonl --output .local\data\track_a_v2_adapter_sensitive\curriculum_manifest.jsonl
-.venv\Scripts\python.exe scripts\run_track_a_v2_base_audit.py --curriculum .local\data\track_a_v2_adapter_sensitive\curriculum_manifest.jsonl --output .local\runs\track_a_v2_base_audit\base_audit_result.json
-.venv\Scripts\python.exe scripts\train_track_a_v2_lora.py --curriculum .local\data\track_a_v2_adapter_sensitive\curriculum_manifest.jsonl --taxonomies document,chart --max-steps 32 --max-samples 32 --eval-train-samples 32 --eval-holdout-samples 32
-.venv\Scripts\python.exe scripts\run_track_a_v2_certification.py --curriculum .local\data\track_a_v2_adapter_sensitive\curriculum_manifest.jsonl --lora-summary .local\runs\track_a_v2_lora_summary\single_lora_learns_summary.json --output .local\runs\track_a_v2_certification\certification_result.json
-.venv\Scripts\python.exe scripts\run_track_a_v2_router_eval.py --certification .local\runs\track_a_v2_certification\certification_result.json --output .local\runs\track_a_v2_router_eval\router_eval_result.json
 ```
 
-위 Track A v2 경로는 M0-M11 진단 폐쇄를 재현하는 scaffold다. 현재 Gemma teacher JSON, fully actual correct-vs-wrong/random margin, router utility, paper-ready 성능 claim은 열지 않는다.
-
-ROI source stability plan:
-
-```powershell
-.venv\Scripts\python.exe scripts\run_roi_source_stability.py --config configs\3090\tiny_scored_roi_stability_64.yaml --manifest .local\data\tiny_scored_manifest\manifest_ocr_detector.jsonl --max-samples 64 --repeats 3 --max-new-tokens 8 --execute --output .local\runs\roi_stability_64_repeats3_plan.json
-```
-
-주요 산출물은 실행별 `.local/runs/<run_id>/combined_validation_result.json`, `summary.csv`, `route_traces.jsonl`, `result_summary_ko.md`, `short_paper_ko.md`에 기록됩니다. `.local/runs/`, `.local/data/`, `.local/hf_cache/`는 로컬 전용이며 Git에는 result brief와 재현 명령만 남깁니다. 자세한 기준은 `docs/00_overview/local_artifact_boundary_ko.md`를 봅니다.
+기존 `configs/3090/` 기반 결과와 이전 Track A v2 M0-M11 closure는 proxy-tainted 결과로 격리했다. no-proxy 검증 커맨드는 actual teacher, actual base/correct/wrong/random scoring, actual adapter switching만 남도록 다시 짠 뒤 사용한다.
 
 ## Claim Rule
 
@@ -162,16 +102,15 @@ ROI source stability plan:
 
 ```text
 Track A v2 main claim:
-  Simula/Gemma teacher loop가 failure traces를 adapter-sensitive curriculum으로 컴파일하고,
-  AdapterCard certification을 통해 shared-backbone LoRA bank를 검증한다.
+  no-proxy teacher/curriculum/certification loop가 실제로 통과한 뒤에만 연다.
 
 Resident specialist compression:
-  shared backbone, smaller/quantized backbone, adapter residency compression에서 온다.
+  실제 측정된 shared backbone, smaller/quantized backbone, adapter residency compression만 쓴다.
 
 Track B support:
-  FoveateR-style ROI evidence compression은 visual token/KV/prefill cost를 통제한다.
+  no-proxy 재검증 전까지 결과 claim으로 쓰지 않는다.
 
 Do not claim yet:
-  trained LoRA accuracy gain, multi-adapter routing utility,
+  quarantined proxy results, trained LoRA accuracy gain, multi-adapter routing utility,
   OCR ROI broad generalization, production p95/p99.
 ```

@@ -1,6 +1,8 @@
 # Ablation Table Plan
 
-Status: Track A v2 table plan
+Status: no-proxy rerun table plan
+
+2026-05-25 기준으로 기존 table의 proxy/mixed/estimate/fallback 결과값은 폐기했다. 아래 표는 새 no-proxy run이 채워야 할 자리만 남긴다.
 
 ## Table 1. AdapterCard Certification
 
@@ -8,8 +10,8 @@ Status: Track A v2 table plan
 
 | Adapter | Taxonomy | Train samples | Holdout samples | Base score | Correct score | Wrong score | Random score | Status |
 |---|---|---:|---:|---:|---:|---:|---:|---|
-| document_track_a_v2_r4_v1 | document / field_value / bind_label_to_value / distractor_confusion | 32 | 32 | 0.502646 proxy | 0.718750 actual | 0.492646 proxy | 0.502646 proxy | mixed evidence, claim closed |
-| chart_track_a_v2_r4_v1 | chart / table_cell / locate / label_value_mismatch | 32 | 32 | 0.412646 proxy | 0.750000 actual | 0.402646 proxy | 0.412646 proxy | mixed evidence, claim closed |
+| document_track_a_v2_r4_v1 | document / field_value / bind_label_to_value / distractor_confusion | planned | planned | actual only | actual only | actual only | actual only | rerun required |
+| chart_track_a_v2_r4_v1 | chart / table_cell / locate / label_value_mismatch | planned | planned | actual only | actual only | actual only | actual only | rerun required |
 | scene_text_track_a_v2_r4_v1 | scene_text / small_text / read / tiny_text_blur | 32 planned | 32 planned | planned | planned | planned | planned | next |
 | ui_status_bind_r4_v1 | ui_screen / ui_status / bind_label_to_value / distractor_confusion | 32 planned | 32 planned | planned | planned | planned | planned | next |
 
@@ -19,22 +21,23 @@ Status: Track A v2 table plan
 
 | Gate | Required comparison | Pass metric | Current status | Claim opened |
 |---|---|---|---|---|
-| Single LoRA Learns | base vs correct LoRA | train/holdout gain or labeled overfit smoke | document/chart path closed | no |
-| Correct Beats Wrong | correct vs wrong/random | margin vs wrong/random | mixed/proxy only | no |
-| Router Selects Adapter | routed vs oracle adapter | routed score near oracle, top1 > random | path closed, utility blocked | no |
-| Resident Cost | shared backbone + bank vs specialist estimate | memory/switch cost | path smoke available | limited accounting only |
+| Single LoRA Learns | base vs correct LoRA | train/holdout gain or labeled overfit smoke | no-proxy rerun required | no |
+| Correct Beats Wrong | correct vs wrong/random | margin vs wrong/random | no-proxy rerun required | no |
+| Router Selects Adapter | routed vs oracle adapter | routed score near oracle, top1 > random | blocked until no-proxy certification | no |
+| Resident Cost | shared backbone + bank vs actual baseline | memory/switch cost | no-proxy rerun required | no |
 
 ## Table 3. Existing Diagnostic Boundary
 
 목적: 기존 결과를 버리지 않고, 새 방향성에서 어떤 의미로 쓰는지 정리한다.
 
+2026-05-25 이후 proxy-tainted 기존 결과는 모두 trashbin으로 격리했다. 이 표는 재작성 전까지 claim 근거가 아니다.
+
 | Path | Memory source | Latency source | Delta / resident MB | Latency ms | Claim |
 |---|---|---|---:|---:|---|
 | sequential full-model reload | actual load/unload smoke | measured | base model load | measured | baseline |
-| proxy LoRA bank | adapter cards | estimate | estimated | estimated | accounting scaffold |
-| actual PEFT attach | actual loaded adapter | measured smoke | measured delta | measured attach | untrained smoke |
-| actual PEFT C-matrix | actual loaded adapter | measured matrix smoke | measured | measured | path smoke, no gain claim |
-| multi-LoRA bank | actual loaded adapters | measured smoke | measured bank delta | measured switch path | path smoke, no routing utility claim |
+| actual PEFT attach | actual loaded adapter | measured smoke | measured delta | measured attach | rerun under no-proxy rules |
+| actual PEFT C-matrix | actual loaded adapter | measured matrix smoke | measured | measured | rerun under no-proxy rules |
+| multi-LoRA bank | actual loaded adapters | measured smoke | measured bank delta | measured switch path | actual-only resummary required |
 
 ## Table 4. ROI Source Comparison
 
@@ -44,7 +47,6 @@ Status: Track A v2 table plan
 |---|---|---:|---:|---:|---:|---:|
 | center_crop | cheap heuristic baseline | measured | measured | measured | measured | measured |
 | oracle_box | upper bound | measured | measured | measured | measured | measured |
-| layout_proxy_box | controlled proxy | measured | measured | measured | measured | measured |
 | ocr_detector_box | practical detector | measured | measured | measured | measured | measured |
 
 `ocr_detector_box`는 `scripts/prepare_ocr_detector_manifest.py`가 생성한 detector fields가 있을 때만 넣는다.
@@ -56,27 +58,19 @@ Status: Track A v2 table plan
 | Cell | Meaning | Score | Visual tokens | Normal peak | Conditional fallback peak | All-sample fallback peak |
 |---|---|---:|---:|---:|---:|---:|
 | C0 | shared backbone + full image | measured | measured | measured | n/a | measured |
-| C3 | taxonomy LoRA proxy + full image | measured | measured | measured | n/a | measured |
-| C4 | taxonomy LoRA proxy + foveated ROI | measured | measured | measured | measured | measured |
-| C5 | taxonomy LoRA proxy + oracle ROI | measured | measured | measured | measured | measured |
+| C3 | taxonomy LoRA + full image | actual only | actual only | actual only | n/a | actual only |
+| C4 | taxonomy LoRA + foveated ROI | actual only | actual only | actual only | actual only | actual only |
+| C5 | taxonomy LoRA + oracle ROI | actual only | actual only | actual only | actual only | actual only |
 | C6 | low-res only | measured | measured | measured | n/a | measured |
 | C7 | controlled fallback | measured | measured | measured | measured | measured |
 
 ## Execution Plan
 
-```powershell
-.venv\Scripts\python.exe scripts\run_roi_source_stability.py --config configs\3090\tiny_scored_roi_stability_64.yaml --manifest .local\data\tiny_scored_manifest\manifest_ocr_detector.jsonl --max-samples 64 --repeats 3 --max-new-tokens 8 --execute --output .local\runs\roi_stability_64_repeats3_plan.json
-```
-
-위 명령은 기존 Track B support table 재현용이다. Track A v2 M0-M11 closure 재현은 아래 순서로 본다.
+기존 proxy-tainted 명령은 실행 계획에서 제거한다. 지금 남기는 것은 schema와 manifest scaffold smoke뿐이다.
 
 ```powershell
 .venv\Scripts\python.exe scripts\check_track_a_v2_schemas.py
 .venv\Scripts\python.exe scripts\prepare_adapter_sensitive_manifest.py --samples-per-taxonomy-split 32 --output .local\data\track_a_v2_adapter_sensitive\manifest.jsonl
-.venv\Scripts\python.exe scripts\run_gemma_teacher_gguf.py --manifest .local\data\track_a_v2_adapter_sensitive\manifest.jsonl --output .local\data\track_a_v2_adapter_sensitive\teacher_annotations.jsonl --max-per-taxonomy 1 --allow-deterministic-fallback
-.venv\Scripts\python.exe scripts\compile_simula_curriculum.py --manifest .local\data\track_a_v2_adapter_sensitive\manifest.jsonl --teacher-annotations .local\data\track_a_v2_adapter_sensitive\teacher_annotations.jsonl --output .local\data\track_a_v2_adapter_sensitive\curriculum_manifest.jsonl
-.venv\Scripts\python.exe scripts\train_track_a_v2_lora.py --curriculum .local\data\track_a_v2_adapter_sensitive\curriculum_manifest.jsonl --taxonomies document,chart --max-steps 32 --max-samples 32 --eval-train-samples 32 --eval-holdout-samples 32
-.venv\Scripts\python.exe scripts\run_track_a_v2_certification.py --curriculum .local\data\track_a_v2_adapter_sensitive\curriculum_manifest.jsonl --lora-summary .local\runs\track_a_v2_lora_summary\single_lora_learns_summary.json --output .local\runs\track_a_v2_certification\certification_result.json
 ```
 
-주의: 현재 certification table은 correct score만 actual LoRA evaluation이고, base/wrong/random은 mixed/proxy다. 논문용 utility claim은 fully actual 비교가 생긴 뒤에만 연다.
+주의: teacher output이 실패했을 때 deterministic fallback을 허용하는 실행은 더 이상 검증 결과로 보존하지 않는다. 논문용 utility claim은 fully actual 비교가 생긴 뒤에만 연다.
