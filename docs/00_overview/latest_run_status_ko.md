@@ -1,7 +1,38 @@
 # Latest Run Status
 
 Status: local validation status note
-Updated: 2026-05-24
+Updated: 2026-05-25
+
+## 0. 현재 방향성
+
+현재 논문 중심축은 Track A v2다.
+
+```yaml
+main_axis:
+  name: "Simula-compiled taxonomy LoRA bank"
+  question: "offline Simula loop가 failure trace를 adapter-sensitive LoRA curriculum으로 컴파일하고, shared-backbone LoRA bank를 certification할 수 있는가?"
+  teacher_model: "Gemma 4 26B as offline teacher/annotator/curriculum generator"
+  runtime_boundary: "Gemma teacher label은 최종 ground truth가 아니며, runtime low-VRAM backbone도 아니다."
+
+support_axis:
+  name: "Track B visual evidence cost control"
+  use_for:
+    - "ROI/input compression baseline"
+    - "adapter certification의 controlled visual budget"
+  do_not_use_for:
+    - "main paper novelty claim"
+    - "OCR ROI broad benchmark generalization"
+```
+
+기존 3090 결과는 폐기하지 않는다. 다만 현재 해석은 다음으로 바꾼다.
+
+```yaml
+current_interpretation:
+  track_b_results: "supporting input-cost evidence"
+  external_n32_lora_no_gain: "negative evidence that current task/taxonomy is not adapter-sensitive"
+  multi_lora_wrong_damage_zero: "motivation for adapter-sensitive dataset redesign"
+  next_gate: "single LoRA learns -> correct beats wrong -> router selects adapter"
+```
 
 ## 1. 현재 커밋된 상태
 
@@ -45,6 +76,9 @@ external_tiny_n32_validation_available: true
 actual_peft_external_baseline_comparison_available: true
 multi_trained_lora_bank_smoke_available: true
 lightweight_backbone_sweep_available: true
+track_a_v2_m0_m11_closure_available: true
+track_a_v2_gemma_teacher_runtime_ok: false
+track_a_v2_actual_lora_taxonomies: ["document", "chart"]
 
 local_only_reference_runs:
   - .local/runs/20260524T090102Z-3090_tiny_scored_validation
@@ -69,6 +103,12 @@ local_only_reference_runs:
   - .local/runs/20260525T010336Z-tiny_lora_train
   - .local/runs/20260525T010610Z-multi_lora_bank_smoke
   - .local/runs/20260525T011135Z-3090_qwen2_vl_2b_external_tiny_n32
+  - .local/runs/track_a_v2_base_audit
+  - .local/runs/20260525T030210Z-tiny_lora_train
+  - .local/runs/20260525T030309Z-tiny_lora_train
+  - .local/runs/track_a_v2_certification
+  - .local/runs/track_a_v2_router_eval
+  - .local/runs/20260525T030429Z-multi_lora_bank_smoke
   - .local/runs/roi_stability_64_repeats3_plan.json
   - .local/runs/20260524T080046Z-3090_two_track_pilot
   - .local/runs/20260524T072015Z-3090_two_track_pilot
@@ -413,27 +453,32 @@ repeated_issue_audit:
 
 ```yaml
 next_promotion_steps:
-  - expand the external benchmark or human-evaluated task set beyond the current tiny n=32 diagnostic
-  - keep trained LoRA accuracy-gain claim closed until baseline improvement appears on stronger held-out/external evidence
-  - design adapter-specific tasks where wrong-adapter damage should be observable
-  - measure full specialist joint residency only on larger hardware, or keep it as an explicit estimate
+  - define AdapterCard v2 and Simula curriculum manifest
+  - build adapter-sensitive train/holdout tasks where a single LoRA can first overfit and then generalize modestly
+  - compare base/correct/wrong/random adapters before claiming any LoRA utility
+  - keep trained LoRA accuracy-gain and multi-adapter routing utility claims closed until the new gates pass
+  - keep Track B as visual evidence cost control, not as the main contribution
 ```
 
 리서치 메모의 `다음에 뭘 더 검증하면 좋을까` 항목은 아래 queue로 정리한다.
 
 ```yaml
 next_validation_queue:
-  - "외부 tiny benchmark는 n=32 diagnostic으로 닫혔고, 다음은 더 큰/사람 검수 subset 확장"
+  - "AdapterCard v2 schema와 certification fields 정리"
+  - "Simula curriculum manifest schema 정리"
+  - "Gemma 4 26B teacher annotation은 후보 label로만 쓰고, heldout certification으로 검증"
+  - "adapter-specific task design으로 wrong-adapter damage가 실제로 드러나는지 확인"
   - "trained LoRA accuracy gain claim은 현재 no-gain이므로 계속 닫아둠"
   - "multi-trained-LoRA bank path는 닫혔지만 wrong-adapter damage가 0.0이라 utility claim은 닫아둠"
-  - "Qwen2-VL-2B 1개 후보 sweep은 닫혔고, 다음은 quantized 후보 또는 추가 1B~3B 후보"
+  - "Qwen2-VL-2B 1개 후보 sweep은 참고 결과로 두고, runtime backbone sweep은 Track A gate 이후로 미룸"
 ```
 
 ## 6. 최종 체크리스트
 
 ```yaml
 closed_for_current_milestone:
-  - two-track research axis
+  - Track A v2 research reframe
+  - two-track historical diagnostics
   - active docs structure
   - local artifact boundary
   - result brief workflow
@@ -463,8 +508,9 @@ closed_for_current_milestone:
   - Qwen2-VL-2B lightweight backbone sweep
 
 needs_next:
-  - stronger external or human-evaluated subset beyond n=32
-  - adapter-specific task design that exposes wrong-adapter damage
-  - quantized or additional 1B~3B backbone candidates
+  - fix Gemma GGUF/mmproj llama.cpp runtime crash before claiming actual teacher annotation
+  - replace proxy base/wrong/random certification scores with actual measured comparisons
+  - extend actual LoRA training from document/chart to scene_text/ui_screen
+  - router-selects-adapter utility only after actual correct-vs-wrong/random margin
   - production p95/p99 only after serving harness exists
 ```

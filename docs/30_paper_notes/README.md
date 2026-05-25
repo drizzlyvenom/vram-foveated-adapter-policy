@@ -5,11 +5,15 @@
 ```yaml
 files:
   paper_outline_ko.md:
-    role: "현재 evidence boundary에 맞춘 소논문 구조"
+    role: "Track A v2 중심축에 맞춘 소논문 구조"
   claim_table_ko.md:
-    role: "쓸 수 있는 claim과 아직 금지할 claim 분리"
+    role: "Track A v2에서 쓸 수 있는 claim과 아직 금지할 claim 분리"
   ablation_table_plan_ko.md:
-    role: "ROI/source, resident/adapter, C-matrix 표 설계"
+    role: "AdapterCard certification 중심 표 설계, ROI/C-matrix는 보조 표로 분리"
+  track_a_v2_reframe_ko.md:
+    role: "Simula/Gemma teacher 기반 Track A v2 중심축 재정렬"
+  track_a_v2_validation_milestones_ko.md:
+    role: "AdapterCard/Simula/compiler 기준 Track A v2 검증 마일스톤"
 ```
 
-원칙은 간단하다. controlled tiny set 결과는 diagnostic evidence로 쓰고, benchmark generalization이나 trained LoRA gain은 실제 후속 run이 생기기 전까지 쓰지 않는다.
+원칙은 간단하다. Track A를 중심축으로 두고, Track B는 visual evidence cost control 보조 모듈로만 쓴다. controlled tiny set 결과는 diagnostic evidence로 쓰고, benchmark generalization이나 trained LoRA gain은 실제 후속 run이 생기기 전까지 쓰지 않는다.

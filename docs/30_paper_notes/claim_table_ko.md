@@ -6,6 +6,10 @@ Status: claim boundary draft
 
 | Claim | Evidence | Boundary |
 |---|---|---|
+| 현재 논문 중심축은 Track A v2, 즉 Simula-compiled taxonomy LoRA bank다. | `track_a_v2_reframe_ko.md`, 최신 README/overview 갱신 | planning/reframe claim |
+| Gemma 4 26B는 teacher/annotator/curriculum generator로 둔다. | Track A v2 reframe | runtime low-VRAM backbone 또는 최종 정답 권위 아님 |
+| 기존 Track B 결과는 visual evidence cost control 보조 근거로 쓴다. | ROI/C-matrix result briefs | 메인 novelty claim 아님 |
+| 외부 n=32 no-gain과 wrong-adapter damage 0.0은 현재 task/taxonomy가 adapter-sensitive하지 않다는 진단 근거다. | external n32, multi-LoRA bank smoke | 실패가 아니라 다음 설계 입력 |
 | RTX 3090에서 Qwen3-VL-4B real CUDA memory/token accounting 경로가 동작한다. | 2026-05-24 real CUDA runs | 단일 GPU pilot |
 | manifest 기반 실제 이미지가 full/low-res/ROI evidence path로 들어간다. | source semantics closure | raw artifacts는 local-only |
 | controlled tiny scored validation에서 ROI source 품질이 score retention을 좌우한다. | center/oracle/layout proxy n=16 | controlled diagnostic set |
@@ -31,6 +35,10 @@ Status: claim boundary draft
 
 | Claim | Required Evidence |
 |---|---|
+| single LoRA가 adapter-sensitive task를 학습한다. | base vs correct LoRA train/holdout 비교 |
+| taxonomy LoRA가 실제 adapter-specific utility를 가진다. | correct adapter가 wrong/random adapter보다 heldout에서 margin 확보 |
+| router가 adapter를 고를 수 있다. | routed score가 oracle adapter score에 가까우며 top1 hit가 random baseline 초과 |
+| Simula compiler가 유효하다. | failure trace -> curriculum -> AdapterCard -> certification까지 재현 가능한 run |
 | controlled result가 넓은 외부 benchmark에서도 유지된다. | 현재 n=32보다 큰 external 또는 human-evaluated subset |
 | trained LoRA accuracy gain을 주장할 수 있다. | 명확한 baseline 대비 held-out/external improvement |
 | multi-adapter routing utility를 주장할 수 있다. | adapter-specific task에서 wrong-adapter damage와 correct-adapter recovery가 관측됨 |
@@ -39,6 +47,9 @@ Status: claim boundary draft
 
 | Unsafe Claim | Why Not |
 |---|---|
+| Track B가 현재 메인 논문 기여다. | 새 방향성에서는 Track B를 visual evidence cost control 보조 모듈로 제한 |
+| Gemma teacher label이 최종 ground truth다. | teacher annotation은 candidate supervision이며 certification은 별도 heldout gate로 닫아야 함 |
+| Simula compiler가 이미 구현/검증됐다. | 현재는 reframe/planning 단계이며 schema와 runner가 다음 작업 |
 | 일반 benchmark에서도 score retention이 유지된다. | 현재는 외부 n=32 tiny diagnostic뿐이라 broad benchmark가 아님 |
 | trained LoRA가 baseline보다 정확도를 향상한다. | 외부 n=32 baseline 비교에서 gain이 관측되지 않음 |
 | tiny trained LoRA가 일반화된다. | 현재는 controlled tiny set holdout 평가 |
@@ -57,4 +68,8 @@ On a controlled tiny scored diagnostic set, ROI source quality dominates task-sc
 
 ```text
 The current layout proxy is a controlled box source, not an external OCR detector. We reserve ocr_detector_box for boxes produced by an optional OCR detector pipeline.
+```
+
+```text
+The current negative LoRA results are evidence that the previous tasks were not adapter-sensitive enough; they do not falsify the Track A v2 adapter-bank direction.
 ```

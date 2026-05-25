@@ -1,54 +1,62 @@
 # 소논문 Outline 초안
 
-Status: working outline
+Status: Track A v2 working outline
 
 ## 1. 중심 문장
 
 ```text
-Low-VRAM vision inference has two separable bottlenecks: resident specialist model memory and visual evidence cost. An RTX 3090 pilot can measure these axes separately with shared-backbone adapter accounting and ROI-based visual evidence compression, while keeping benchmark and trained-adapter claims out of scope.
+Can an offline Simula loop compile failure traces into certified taxonomy LoRA adapters, so that multiple vision specialists can be consolidated onto a shared VLM backbone under a low-VRAM budget?
 ```
 
 한국어로는 다음처럼 둔다.
 
 ```text
-저 VRAM 비전 추론의 병목은 resident specialist model memory와 visual evidence cost로 나눌 수 있다. RTX 3090 pilot은 shared-backbone adapter accounting과 ROI evidence compression을 분리 계측하되, 일반 benchmark 우월성이나 trained adapter 성능 향상은 아직 주장하지 않는다.
+오프라인 Simula 루프가 실패 trace를 taxonomy별 LoRA curriculum으로 컴파일하고, 이를 AdapterCard certification으로 검증해 여러 vision specialist를 shared VLM backbone 위에 통합할 수 있는가?
 ```
 
 ## 2. 섹션 구조
 
 ```yaml
 introduction:
-  - low-VRAM vision inference의 두 병목 정의
-  - resident memory와 visual token/KV/prefill 비용을 섞어 말하면 안 되는 이유
+  - 여러 vision specialist를 full VLM로 따로 유지할 때 생기는 resident memory와 swap cost 문제
+  - 기존 Track B 결과가 많지만, 현재 논문축은 adapter bank consolidation임을 명시
+  - 핵심 질문: failure trace를 adapter-sensitive LoRA curriculum으로 컴파일할 수 있는가
 
 method:
-  - Track A: full specialist VLM reload / joint residency estimate vs shared backbone + LoRA bank
-  - Track B: full image vs low-res only vs foveated ROI vs oracle ROI
-  - normal path, controlled fallback, emergency peak 분리
+  - Gemma 4 26B teacher: annotation, taxonomy labeling, curriculum/hard-negative proposal
+  - Simula compiler: trace -> taxonomy -> train/holdout curriculum -> AdapterCard candidate
+  - AdapterCard v2: taxonomy, training, serving, certification fields
+  - certification gates: single LoRA learns, correct beats wrong/random, router selects adapter
+  - Track B ROI path: controlled visual evidence cost module
 
 diagnostic_setup:
   - RTX 3090 24GB
   - Qwen3-VL-4B local snapshot as reference/accounting anchor
-  - controlled tiny scored image set
-  - normalized answer matching
+  - existing controlled/external tiny result as diagnostic boundary
+  - adapter-sensitive synthetic/heldout task design
+  - normalized answer matching plus base/correct/wrong/random comparison
 
 results:
-  - ROI source comparison
-  - sequential specialist reload vs actual PEFT attach
-  - combined C-matrix
+  - existing result recap: Track B support and Track A path smoke
+  - negative result: external n32 trained LoRA no gain
+  - negative result: multi-LoRA bank wrong-adapter damage 0.0
+  - new target table: AdapterCard certification gates
 
 limitations:
   - controlled tiny set, not broad benchmark
-  - layout_proxy_box, not external OCR detector
-  - untrained PEFT attach, not trained LoRA gain
+  - Gemma teacher labels are candidates, not final ground truth
+  - current LoRA results do not show accuracy gain
+  - current taxonomy/tasks are not adapter-sensitive enough
+  - ROI/OCR results are visual-cost support, not main novelty
   - Qwen3-VL-4B is a reference backbone, not a lightweight target sweep
   - production p95/p99 out of scope
 
 next_work:
-  - ocr_detector_box oracle-gap measurement
-  - external tiny subset
-  - trained LoRA path
-  - lightweight 1B-3B VLM backbone sweep
+  - AdapterCard v2 schema
+  - Simula curriculum manifest schema
+  - adapter-sensitive manifest generator
+  - base/correct/wrong/random certification runner
+  - router gate only after correct beats wrong
 ```
 
 ## 2.1 Backbone 역할 분리
@@ -71,5 +79,5 @@ backbone_roles:
 ## 3. 현재 abstract 재료
 
 ```text
-We present a measurement-first pilot for low-VRAM vision inference on an RTX 3090. The design separates resident specialist compression from visual evidence compression. For resident compression, we compare sequential full-model reload and shared-backbone adapter accounting, including an actual PEFT attach smoke. For visual evidence compression, a controlled tiny scored set shows that ROI source quality dominates task-score retention under a fixed foveated token budget. Oracle/layout proxy ROI preserves full-image score on this diagnostic set while reducing visual tokens, whereas center crop and low-res-only baselines fail when target evidence is missed. These results support feasibility and instrumentation claims, not benchmark superiority or trained-LoRA accuracy gains.
+We present a measurement-first plan for consolidating vision specialists on a shared VLM backbone under a low-VRAM budget. The central mechanism is an offline Simula loop that compiles failure traces into taxonomy-specific LoRA curricula. A Gemma 4 26B teacher proposes annotations, hard negatives, and expected answers, but adapter certification is decided by base/correct/wrong/random comparisons on held-out adapter-sensitive tasks. Existing RTX 3090 diagnostics show that the PEFT load path and multi-adapter bank path work, while current tasks do not yet produce trained-LoRA gain or wrong-adapter damage. We therefore use those negative results to motivate AdapterCard v2 certification and keep foveated ROI evidence as an input-cost control module rather than the main contribution.
 ```

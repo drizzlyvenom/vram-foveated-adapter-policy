@@ -1,0 +1,19 @@
+run_id: "20260525T030429Z-multi_lora_bank_smoke"
+adapter_i: "document_track_a_v2_r4_v1"
+adapter_j: "chart_track_a_v2_r4_v1"
+same_domain: false
+same_operation: false
+behavioral_synergy: null
+conflict_score: 0.0
+certified_together: false
+evidence:
+  manifest_path: ".local/data/track_a_v2_adapter_sensitive/manifest.jsonl"
+  samples: 8
+  adapter_bank_allocated_delta_mb: 22.5
+  correct_score_mean: 0.75
+  wrong_score_mean: 0.75
+  correct_minus_wrong_score_mean: 0.0
+claim_boundary:
+  compatibility_path_smoke: true
+  routing_utility_claim: false
+  wrong_adapter_damage_actual_margin_claim: false

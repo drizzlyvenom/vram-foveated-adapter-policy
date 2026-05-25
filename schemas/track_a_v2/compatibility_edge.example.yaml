@@ -1,0 +1,11 @@
+adapter_i: "doc_field_bind_r4_v1"
+adapter_j: "chart_cell_locate_r4_v1"
+same_domain: false
+same_operation: false
+behavioral_synergy: null
+conflict_score: 0.0
+certified_together: false
+evidence:
+  run_id: "track_a_v2_compatibility_example"
+  wrong_adapter_damage_i_to_j: null
+  wrong_adapter_damage_j_to_i: null

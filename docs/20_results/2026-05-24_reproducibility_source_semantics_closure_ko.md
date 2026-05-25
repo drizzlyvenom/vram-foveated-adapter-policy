@@ -1,5 +1,9 @@
 # 2026-05-24 Reproducibility + Source Semantics Closure
 
+## 현재 방향성에서의 해석
+
+이 결과는 새 Track A v2 실험이 따라야 할 source semantics와 재현성 경계를 정리한 기반 문서다. 성능 claim이 아니라, teacher annotation, Simula manifest, AdapterCard certification에서도 같은 `real vs proxy` 분리를 유지해야 한다는 근거로 쓴다.
+
 ## 요약
 
 `ba2029a` 기준 main 작업면에서 real-task image smoke 재현 명령을 다시 실행했고, RTX 3090 real CUDA run이 정상 완료되었다. 이번 closure의 목적은 새 성능 claim을 추가하는 것이 아니라, **현재 repo의 공개 파일만으로 같은 검증 경로를 재실행할 수 있음**과 **trace/result가 실제 측정값과 proxy/estimate 값을 더 명확히 분리해 기록함**을 확인하는 것이다.

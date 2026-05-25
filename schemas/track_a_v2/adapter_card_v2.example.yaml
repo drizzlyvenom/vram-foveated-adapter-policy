@@ -1,0 +1,38 @@
+adapter_id: "doc_field_bind_r4_v1"
+base_backbone: "Qwen/Qwen3-VL-4B-Instruct"
+teacher_model: "google/gemma-4-26B-A4B-it"
+
+taxonomy:
+  domain: "document"
+  evidence_type: "field_value"
+  operation: "bind_label_to_value"
+  failure_mode: "distractor_confusion"
+
+training:
+  curriculum_id: "simula_doc_field_bind_v1"
+  source_trace_ids: []
+  train_samples: 32
+  holdout_samples: 32
+  label_mask_mode: "answer_only"
+
+structure:
+  rank: 4
+  alpha: 8
+  target_modules: ["q_proj", "v_proj"]
+
+serving:
+  adapter_memory_mb: null
+  attach_latency_ms: null
+  switch_latency_ms: null
+
+certification:
+  base_score: null
+  correct_adapter_score: null
+  wrong_adapter_score: null
+  random_adapter_score: null
+  gain_vs_base: null
+  margin_vs_wrong: null
+  margin_vs_random: null
+  wrong_adapter_damage: null
+  score_source: "not_measured"
+  status: "experimental"

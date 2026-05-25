@@ -1,13 +1,13 @@
 # Docs Index
 
-이 폴더는 active RTX 3090 two-track validation 문서를 목적별로 나눈다.
+이 폴더는 active RTX 3090 / Track A v2 validation 문서를 목적별로 나눈다. 현재 논문 중심축은 `Simula-compiled taxonomy LoRA bank`이며, 기존 Track B 결과는 visual evidence cost control 보조 근거로 해석한다.
 
 ```text
 docs/
   00_overview/   프로젝트 상태, claim boundary, 로컬 산출물 경계
-  10_protocols/ 검증 ladder, metric contract, decision gate
-  20_results/   raw runs 대신 커밋하는 결과 브리프
-  30_paper_notes/ 소논문 outline, claim table, ablation/table plan
+  10_protocols/ Track A v2 certification ladder, metric contract, decision gate
+  20_results/   raw runs 대신 커밋하는 결과 브리프와 현재 해석
+  30_paper_notes/ Track A v2 reframe, 소논문 outline, claim table, ablation/table plan
 ```
 
 현재 active 문서는 다음 경로를 기준으로 참조한다.
@@ -22,9 +22,12 @@ protocols:
   - docs/10_protocols/3090_execution_ladder_ko.md
   - docs/10_protocols/3090_metrics_contract_ko.md
   - docs/10_protocols/3090_decision_gates_ko.md
+  - schemas/track_a_v2/
+  - configs/track_a_v2/
 
 results:
   - docs/20_results/README.md
+  - docs/20_results/2026-05-25_external_n32_multi_lora_backbone_ko.md
   - docs/20_results/2026-05-24_unique64_stability_lora_peft_ko.md
   - docs/20_results/2026-05-24_p1_answer_mask_ocr_stability_ko.md
   - docs/20_results/2026-05-24_ocr_detector_trained_lora_smoke_ko.md
@@ -35,9 +38,25 @@ results:
 
 paper_notes:
   - docs/30_paper_notes/README.md
+  - docs/30_paper_notes/track_a_v2_reframe_ko.md
+  - docs/30_paper_notes/track_a_v2_validation_milestones_ko.md
   - docs/30_paper_notes/paper_outline_ko.md
   - docs/30_paper_notes/claim_table_ko.md
   - docs/30_paper_notes/ablation_table_plan_ko.md
 ```
 
 원본 실행 산출물은 `.local/runs/`에 두고 Git에는 올리지 않는다. Git에는 재현 명령, 핵심 수치, gate 상태, source semantics, claim boundary를 담은 result brief만 남긴다.
+
+현재 문서 해석의 우선순위는 다음이다.
+
+```yaml
+current_direction:
+  main_axis: "Track A v2 / Simula-compiled taxonomy LoRA bank"
+  teacher: "Gemma 4 26B as offline annotator and curriculum generator"
+  compiler: "Simula as offline LoRA curriculum compiler"
+  support_axis: "Track B as visual evidence cost control"
+  closed_claims:
+    - trained LoRA accuracy gain
+    - multi-adapter routing utility
+    - OCR ROI broad benchmark generalization
+```

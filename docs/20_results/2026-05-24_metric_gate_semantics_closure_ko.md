@@ -1,5 +1,9 @@
 # 2026-05-24 Metric/Gate Semantics Closure
 
+## 현재 방향성에서의 해석
+
+이 결과는 Track A v2의 메인 성능 근거가 아니라, 이후 AdapterCard certification runner가 써야 할 metric/gate semantics를 닫은 infrastructure evidence다. Track B 관련 C-matrix 값은 visual evidence cost control 보조 근거로만 읽는다.
+
 ## 요약
 
 `a1a158a` 기준 main 작업면에서 M-A metric/gate semantics 변경을 적용한 뒤, RTX 3090 real CUDA smoke를 다시 실행했다. 이번 closure의 목적은 새 성능 claim을 추가하는 것이 아니라, C-matrix 결과가 **점수 출처**, **controlled fallback peak의 조건부/전체 샘플 의미**, **minimum/extended completion gate**를 분리해 기록하는지 확인하는 것이다.

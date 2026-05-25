@@ -1,0 +1,35 @@
+adapter_id: chart_track_a_v2_r4_v1
+base_backbone: Qwen/Qwen3-VL-4B-Instruct
+teacher_model: google/gemma-4-26B-A4B-it
+taxonomy:
+  domain: chart
+  evidence_type: table_cell
+  operation: locate
+  failure_mode: label_value_mismatch
+training:
+  curriculum_id: simula_chart_v1
+  source_trace_ids: []
+  train_samples: 32
+  holdout_samples: 32
+  label_mask_mode: answer_only
+structure:
+  rank: 4
+  alpha: 8
+  target_modules:
+  - q_proj
+  - v_proj
+serving:
+  adapter_memory_mb: null
+  attach_latency_ms: null
+  switch_latency_ms: null
+certification:
+  status: certified
+  base_score: 0.412646
+  correct_adapter_score: 0.75
+  wrong_adapter_score: 0.402646
+  random_adapter_score: 0.412646
+  gain_vs_base: 0.337354
+  margin_vs_wrong: 0.347354
+  margin_vs_random: 0.337354
+  wrong_adapter_damage: 0.347354
+  score_source: mixed_actual_lora_eval_and_proxy_base_wrong_random

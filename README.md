@@ -1,25 +1,34 @@
-# VRAM-Constrained Foveated Adapter Policy
+# VRAM-Constrained Adapter Policy
 
-이 프로젝트는 low-VRAM vision inference를 두 개의 상호보완 트랙으로 검증하는 연구 작업 폴더입니다.
+이 프로젝트는 low-VRAM vision specialist를 하나의 shared VLM backbone 위에 통합하기 위한 연구 작업 폴더입니다. 현재 논문 중심축은 **Track A v2: Simula-compiled taxonomy LoRA bank**입니다. Track B의 foveated/ROI 경로는 버리지 않지만, 메인 기여가 아니라 adapter certification에서 visual evidence cost를 통제하는 보조 모듈로 둡니다.
 
 ```text
-Track A. Shared-backbone LoRA specialist consolidation
-  여러 full specialist VLM
-  -> 하나의 공유 VLM backbone + taxonomy-tagged resident LoRA bank
+Track A v2. Simula-compiled taxonomy LoRA bank
+  failure traces / low-confidence cases / wrong-adapter records
+  -> Gemma 4 26B teacher annotations
+  -> Simula curriculum compiler
+  -> adapter-sensitive LoRA candidates
+  -> AdapterCard-certified resident LoRA bank
 
-Track B. FoveateR-style visual evidence compression
+Track B support. Visual evidence cost control
   full high-resolution visual context
   -> low-resolution global view + high-resolution ROI glimpses
+  -> controlled input budget for Track A certification
 ```
 
-두 트랙은 서로 다른 병목을 줄입니다.
+현재 문서 해석 원칙은 다음입니다.
 
-- Track A는 duplicated specialist backbone residency와 model swap latency를 줄인다.
-- Track B는 visual token count, prefill cost, visual KV/cache growth를 줄인다.
-- End-to-end peak VRAM 주장은 두 트랙을 함께 측정하되, normal path와 fallback/emergency peak를 분리해서 보고한다.
+- Track A v2가 메인 연구축이다.
+- Gemma 4 26B는 runtime model이 아니라 teacher/annotator/curriculum generator다.
+- Simula는 runtime reasoner가 아니라 offline LoRA curriculum/compiler loop다.
+- LoRA gain이나 routing utility는 `base / correct / wrong / random` certification gate를 통과하기 전까지 주장하지 않는다.
+- Track B는 ROI/input compression baseline과 visual evidence budget control로만 쓴다.
+- 기존 Track B 결과는 폐기하지 않고, adapter certification의 입력 비용 통제 근거로 재해석한다.
 
 ## 현재 핵심 문서
 
+- Track A v2 reframe: `docs/30_paper_notes/track_a_v2_reframe_ko.md`
+- Track A v2 validation milestones: `docs/30_paper_notes/track_a_v2_validation_milestones_ko.md`
 - 3090 validation guideline: `docs/00_overview/3090_two_track_validation_guideline_ko.md`
 - docs index: `docs/README.md`
 - latest local run status: `docs/00_overview/latest_run_status_ko.md`
@@ -35,16 +44,20 @@ Track B. FoveateR-style visual evidence compression
 - 3090 actual PEFT matrix smoke config: `configs/3090/tiny_scored_actual_peft_matrix_smoke.yaml`
 - 3090 trained LoRA full C-matrix config: `configs/3090/tiny_scored_trained_lora_full_cmatrix.yaml`
 - 3090 adapter cards: `configs/3090/adapter_cards.yaml`
+- Track A v2 adapter cards: `configs/track_a_v2/adapter_cards/`
 - 3090 result schemas: `schemas/3090/residency_trace.example.yaml`, `schemas/3090/combined_validation_result.example.yaml`
+- Track A v2 schemas: `schemas/track_a_v2/`
 - paper notes: `docs/30_paper_notes/`
 
 ## 경로 구조
 
 ```text
 configs/3090/      active RTX 3090 configs
+configs/track_a_v2/ Track A v2 AdapterCard and compatibility records
 docs/00_overview/  overview, latest status, local artifact boundary
-docs/10_protocols/ validation ladder, metrics contract, decision gates
-docs/20_results/   committed result briefs
+docs/10_protocols/ Track A v2 certification ladder, metrics contract, decision gates
+docs/20_results/   committed result briefs and current interpretation notes
+docs/30_paper_notes/ Track A v2 paper notes
 schemas/3090/      trace/result schema examples
 scripts/           manifest preparation and validation runners
 src/vfa_policy/    accounting, foveation, consolidation modules
@@ -68,7 +81,7 @@ Legacy/source_bundles/vfa_3090_two_track_validation_docs/
 
 ## 실행 참고
 
-3090 투트랙 검증 dry-run scaffold:
+기존 3090 diagnostic scaffold:
 
 ```powershell
 python scripts\run_3090_two_track_validation.py --config configs\3090\two_track_pilot.yaml --dry-run
@@ -132,13 +145,17 @@ ROI source stability plan:
 항상 다음을 분리해서 말합니다.
 
 ```text
-Resident VRAM reduction:
+Track A v2 main claim:
+  Simula/Gemma teacher loop가 failure traces를 adapter-sensitive curriculum으로 컴파일하고,
+  AdapterCard certification을 통해 shared-backbone LoRA bank를 검증한다.
+
+Resident specialist compression:
   shared backbone, smaller/quantized backbone, adapter residency compression에서 온다.
 
-Visual token / KV reduction:
-  FoveateR-style ROI evidence compression에서 온다.
+Track B support:
+  FoveateR-style ROI evidence compression은 visual token/KV/prefill cost를 통제한다.
 
-End-to-end peak reduction:
-  Track A와 Track B를 함께 측정하고,
-  normal path / controlled fallback / emergency peak를 따로 보고해야 한다.
+Do not claim yet:
+  trained LoRA accuracy gain, multi-adapter routing utility,
+  OCR ROI broad generalization, production p95/p99.
 ```

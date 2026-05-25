@@ -3,6 +3,36 @@
 Status: metric contract
 Purpose: RouteTrace와 summary가 반드시 남겨야 하는 필드를 정의한다.
 
+현재 Track A v2에서는 기존 memory/token metric에 더해 `teacher -> Simula curriculum -> LoRA candidate -> AdapterCard certification` 흐름을 기록한다. 기존 C-matrix와 ROI metric은 계속 유지하되, Track B는 visual evidence cost control로 해석한다.
+
+## 0. Track A v2 certification fields
+
+```yaml
+track_a_v2:
+  teacher_model: "google/gemma-4-26B-A4B-it"
+  teacher_role: annotator_curriculum_generator
+  simula_manifest_id: null
+  curriculum_id: null
+  adapter_card_id: null
+  adapter_certification_status: experimental | candidate | certified | rejected
+
+taxonomy_v2:
+  domain: document | scene_text | ui_screen | chart | null
+  evidence_type: small_text | field_value | table_cell | axis_label | ui_status | visual_symbol | null
+  operation: read | locate | bind_label_to_value | compare | normalize_answer | structured_output | null
+  failure_mode: missed_evidence | wrong_region | label_value_mismatch | distractor_confusion | low_res_ambiguity | wrong_adapter_confidence_gain | null
+
+certification_scores:
+  base_score: null
+  correct_adapter_score: null
+  wrong_adapter_score: null
+  random_adapter_score: null
+  gain_vs_base: null
+  margin_vs_wrong: null
+  margin_vs_random: null
+  wrong_adapter_damage: null
+```
+
 ## 1. Memory breakdown
 
 단일 `peak_vram_mb`만 기록하지 않는다. 최소한 다음을 분리한다.
@@ -75,6 +105,13 @@ residency:
 quality:
   task_score: null
   answer_correct: null
+  base_score: null
+  correct_adapter_score: null
+  wrong_adapter_score: null
+  random_adapter_score: null
+  adapter_gain_vs_base: null
+  adapter_margin_vs_wrong: null
+  adapter_margin_vs_random: null
   score_retention_vs_oracle_lora: null
   score_retention_vs_full_specialist: null
   score_gain_vs_shared_backbone_only: null
@@ -95,9 +132,15 @@ quality:
 routing:
   router_type: none | oracle | taxonomy_card | taxonomy_cost | foveater_guided | future_jepa
   selected_adapter_ids: []
+  oracle_adapter_id: null
+  correct_adapter_id: null
+  wrong_adapter_id: null
+  random_adapter_id: null
   selected_roi_id: null
   top1_route_hit: null
   top3_route_hit: null
+  routed_score: null
+  oracle_adapter_score: null
   abstained: false
   wrong_route: false
   wrong_adapter_damage: null
@@ -187,6 +230,10 @@ source:
   roi_contains_target_evidence: null
   evidence_preparation: null
   task_validation_level: smoke_or_proxy | stage1_image_smoke | real_task_image_smoke | real_task_validation
+  teacher_model: null
+  teacher_annotation_source: none | gemma4_26b | human | synthetic_rule
+  simula_compiler_version: null
+  curriculum_manifest_id: null
   source_semantics_version: v0.3
   real_measurement_fields: []
   estimate_or_proxy_fields: []

@@ -4,6 +4,10 @@ Status: controlled RTX 3090 diagnostic pass
 Date: 2026-05-24
 Promotion gate: false
 
+## 현재 방향성에서의 해석
+
+이 결과는 64 unique manifest, repeats=3 OCR stability, train/holdout path, actual PEFT C-matrix를 닫은 diagnostic milestone이다. Track A v2에서는 `기존 controlled task가 path는 닫지만 adapter-sensitive utility는 아직 보이지 않는다`는 설계 입력으로 쓴다.
+
 ## Summary
 
 P1에서 남아 있던 `20 unique + cyclic n=32` 한계를 64개 고유 controlled sample로 닫았다. 새 manifest는 4개 도메인별 16개, 총 64개이며 `train=32`, `holdout=32` split을 기록한다. RapidOCR detector box도 64/64 생성됐다.

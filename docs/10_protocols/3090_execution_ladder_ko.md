@@ -6,32 +6,108 @@ Purpose: 3090에서 어떤 순서로 검증할지 정의한다.
 ## Ladder overview
 
 ```text
-R0. Memory accounting smoke
-R1. Multi-specialist residency baseline
-R2. Shared backbone + LoRA bank baseline
-R3. FoveateR-style visual evidence compression
-R4. Combined two-track pilot
-R5. Compatibility and collapse instrumentation
+A0. Existing diagnostic boundary
+A1. AdapterCard v2 schema
+A2. Simula curriculum manifest
+A3. Single LoRA learns
+A4. Correct adapter beats wrong/random
+A5. Router selects adapter
+B0. Track B visual evidence cost control
+S0. Serving/accounting integration, only after A gates pass
 ```
 
 ## Current validation milestones
 
-M-A 이후의 검증은 proxy를 실제 측정으로 교체하는 순서로 닫는다.
+이전 M-B~M-H 검증은 Track B와 path smoke를 닫는 데 유용했다. 새 방향에서는 이 결과를 `A0`의 existing diagnostic boundary로 묶고, 다음 실험은 adapter-sensitive certification으로 이동한다.
 
 ```yaml
-M-B_ROI_source_comparison:
-  goal: center_crop, oracle_box, layout_proxy_box, optional ocr_detector_box를 같은 tiny scored manifest에서 비교
-  required:
-    - actual_image_execution: true
-    - task_score_source: normalized_answer_match
-    - roi_contains_target_evidence
-    - visual_token_count / prefill_latency / normal_path_peak
-  naming:
-    - ocr_box_or_layout_box는 legacy alias이며 실제 OCR detector output으로 해석하지 않는다.
-    - layout_proxy_box는 controlled proxy다.
-    - ocr_detector_box는 scripts/prepare_ocr_detector_manifest.py가 detector box를 기록한 manifest에서만 사용한다.
+A0_existing_diagnostic_boundary:
+  status: closed_for_diagnostic_use
+  includes:
+    - C0/C3/C4/C5/C6/C7 matrix path
+    - OCR detector ROI path
+    - answer-only tiny LoRA train/save/load
+    - actual PEFT load path
+    - external n32 baseline-vs-trained comparison
+    - multi-adapter bank load/switch smoke
+  interpretation:
+    - Track B is supporting visual-cost evidence
+    - current taxonomy/tasks are not adapter-sensitive enough
 
-ROI source 이름은 곧 claim boundary이므로 다음 taxonomy를 유지한다.
+A1_adaptercard_v2_schema:
+  goal: 각 LoRA candidate를 weight 파일이 아니라 certification card로 다룸
+  required:
+    - adapter_id
+    - base_backbone
+    - teacher_model
+    - taxonomy.domain/evidence_type/operation/failure_mode
+    - training curriculum id and split sizes
+    - rank/alpha/target_modules
+    - serving memory/latency fields
+    - certification base/correct/wrong/random scores
+  boundary:
+    - card status can be experimental until certification passes
+
+A2_simula_curriculum_manifest:
+  goal: failure trace를 taxonomy별 train/holdout curriculum으로 컴파일
+  required:
+    - source trace ids or synthetic generation seed
+    - teacher annotations
+    - expected answers
+    - train/holdout split
+    - hard negatives
+    - target adapter taxonomy
+  boundary:
+    - Gemma teacher output is candidate supervision, not final ground truth
+
+A3_single_lora_learns:
+  goal: adapter-sensitive task에서 correct LoRA가 output을 바꿀 수 있는지 확인
+  required:
+    - base_train_score
+    - correct_lora_train_score
+    - base_holdout_score
+    - correct_lora_holdout_score
+    - train overfit allowed in first smoke
+  pass_if:
+    - correct_lora_train_score > base_train_score
+    - holdout does not collapse below base by more than configured tolerance
+
+A4_correct_beats_wrong_random:
+  goal: taxonomy가 실제 adapter utility를 만들었는지 확인
+  required:
+    - base_score
+    - correct_adapter_score
+    - wrong_adapter_score
+    - random_adapter_score
+    - wrong_adapter_damage
+    - margin_vs_wrong
+  pass_if:
+    - correct_adapter_score > wrong_adapter_score + 0.05
+    - correct_adapter_score > random_adapter_score + 0.05
+
+A5_router_selects_adapter:
+  goal: oracle adapter가 아니라 router가 adapter를 고를 수 있는지 확인
+  required:
+    - taxonomy_router_top1_hit
+    - routed_score
+    - oracle_adapter_score
+    - wrong_route_count
+  pass_if:
+    - routed_score is close to oracle_adapter_score
+    - top1 route hit beats random baseline
+
+B0_visual_evidence_cost_control:
+  goal: Track A certification 입력 비용을 full image / low-res / ROI로 통제
+  required:
+    - visual_token_count
+    - prefill_latency
+    - normal_path_peak
+    - roi_source taxonomy
+  boundary:
+    - not a main novelty claim
+```
+
+ROI source 이름은 아직 claim boundary이므로 다음 taxonomy를 유지한다.
 
 ```yaml
 roi_source_taxonomy:
@@ -50,60 +126,6 @@ roi_source_taxonomy:
   foveater_model:
     role: "learned ROI policy"
     safe_claim: "not yet validated"
-```
-
-M-C_tiny_scored_task_validation:
-  goal: synthetic_proxy task_score를 실제 모델 답변의 normalized answer match로 교체
-  required:
-    - expected_answers
-    - answer_type
-    - actual_task_score_available_rate: 1.0
-
-M-D_sequential_specialist_swap:
-  goal: full specialist proxy model의 load/unload/reload latency 실측
-  required:
-    - model_load_latency_ms
-    - unload_empty_cache_latency_ms
-    - residual_allocated_mb
-    - residual_reserved_mb
-
-M-E_actual_peft_smoke:
-  goal: proxy_card_accounting과 별개로 실제 PEFT LoRA attach path의 memory/latency 측정, 이후 C3/C4 matrix smoke에 반영
-  required:
-    - adapter_execution_mode: actual_peft
-    - adapter_memory_source: actual_loaded_adapter
-    - peft_allocated_delta_mb
-    - peft_attach_latency_ms
-    - trained_lora_gain_claim: false
-
-M-F_repeated_pilot:
-  goal: n=16 이상 또는 repeats=3 반복 측정으로 mean, std, p95를 보고
-  required:
-    - task_score_std
-    - visual_token_count_p95
-    - normal_path_peak_mb_p95
-    - visual_incremental_peak_mb_p95
-    - controlled_fallback_peak_mb_all_samples_p95
-
-M-G_ocr_detector_roi_path_smoke:
-  goal: layout_proxy_box를 실제 OCR detector output인 ocr_detector_box로 교체하는 짧은 smoke
-  required:
-    - ocr_detector_available: true
-    - roi_source: ocr_detector_box
-    - actual_image_execution: true
-    - task_score_source: normalized_answer_match
-  boundary:
-    - controlled tiny smoke이며 외부 benchmark oracle gap claim은 아직 아니다.
-
-M-H_tiny_trained_lora_smoke:
-  goal: random PEFT attach를 넘어 tiny trained adapter의 학습/저장/로드 경로를 닫음
-  required:
-    - trained_adapter_saved: true
-    - adapter_memory_source: actual_loaded_adapter
-    - adapter_execution_mode: actual_peft
-    - adapter_path: ".local/adapters/tiny_lora_latest"
-  boundary:
-    - training path smoke이며 trained LoRA accuracy gain claim은 아직 아니다.
 ```
 
 ## R0. Memory accounting smoke

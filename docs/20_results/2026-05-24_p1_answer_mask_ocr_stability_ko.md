@@ -1,5 +1,9 @@
 # 2026-05-24 P1 Answer Mask / OCR Detector n=32 Stability
 
+## 현재 방향성에서의 해석
+
+이 결과는 answer-only label masking과 OCR detector stability를 닫은 diagnostic evidence다. Track A v2에서는 향후 Simula curriculum/AdapterCard runner가 사용할 label-mask 기본값과 ROI cost-control 입력 경로로 해석한다.
+
 ## 요약
 
 `e433807` 작업면에서 리서치 P1 지적 중 세 항목을 확인했다. 첫째, tiny LoRA training은 answer-only label masking을 기본값으로 바꾸고 4-step smoke를 다시 실행했다. 둘째, 새 adapter를 C3/C4 actual PEFT matrix smoke에 로드해 경로가 깨지지 않았음을 확인했다. 셋째, OCR detector ROI를 n=32 C0-C7 real CUDA run으로 올려 measurement gate를 다시 통과시켰다.

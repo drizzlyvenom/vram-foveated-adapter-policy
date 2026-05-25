@@ -2,6 +2,8 @@
 
 이 문서는 이 저장소에서 **Git에 커밋되는 공개 산출물**과 **로컬 작업 디렉터리에만 남기는 실행 산출물**을 구분하기 위한 기준 문서다. 외부 검토나 리서치 핸드오프에서 `.local/runs/`, `.local/data/`, `.local/hf_cache/`가 Git에 없다는 이유로 재현성 문제가 있다고 오해하지 않도록, 어떤 파일이 왜 커밋되지 않는지 명시한다.
 
+현재 연구 방향은 Track A v2, 즉 `Simula-compiled taxonomy LoRA bank`다. 따라서 커밋되는 문서는 raw 실행 로그가 아니라 AdapterCard/certification/claim boundary를 재현 가능한 형태로 설명해야 한다. Track B 산출물은 visual evidence cost control의 보조 결과로 보존한다.
+
 ## 1. 커밋되는 산출물
 
 Git에 커밋되는 파일은 다른 사람이 저장소를 clone했을 때 검증 구조를 이해하고 같은 실험을 다시 실행할 수 있게 하는 최소 작업면이다.
@@ -9,13 +11,14 @@ Git에 커밋되는 파일은 다른 사람이 저장소를 clone했을 때 검�
 ```yaml
 committed:
   docs:
-    role: "protocol, claim boundary, result brief, latest status"
+    role: "Track A v2 protocol, AdapterCard/certification claim boundary, result brief, latest status"
     examples:
       - "docs/00_overview/3090_two_track_validation_guideline_ko.md"
       - "docs/10_protocols/3090_execution_ladder_ko.md"
       - "docs/10_protocols/3090_metrics_contract_ko.md"
       - "docs/00_overview/latest_run_status_ko.md"
       - "docs/20_results/"
+      - "docs/30_paper_notes/track_a_v2_reframe_ko.md"
   configs:
     role: "active validation config and adapter cards"
   schemas:
@@ -37,6 +40,7 @@ result_brief_contains:
   - key_metrics
   - gate_status
   - source_semantics
+  - current_track_a_v2_interpretation
   - safe_claims
   - not_yet_claims
 ```
@@ -111,10 +115,14 @@ safe_to_claim:
   - "RTX 3090에서 real CUDA memory-accounting runner가 동작한다."
   - "Qwen3-VL-4B local snapshot을 공유 backbone으로 로드하고 base-after-load memory를 기록한다."
   - "real_task_manifest 이미지가 full/low-res/ROI evidence path로 들어가며, 같은 C-matrix schema로 token/peak를 기록한다."
+  - "기존 Track B/ROI 결과는 Track A v2 adapter certification의 visual evidence cost control 보조 근거로 쓴다."
+  - "외부 n=32와 multi-LoRA smoke는 현재 taxonomy/task가 adapter-sensitive하지 않다는 negative evidence를 제공한다."
   - "result brief는 raw runs를 커밋하지 않고 핵심 수치와 claim boundary만 보존한다."
 
 not_claimed_yet:
   - "trained LoRA가 실제 task accuracy를 향상한다."
+  - "multi-adapter routing이 accuracy를 향상한다."
+  - "Gemma teacher label이 최종 ground truth다."
   - "center_crop ROI가 task-relevant ROI를 안정적으로 찾는다."
   - "multi-specialist baseline을 실측으로 이겼다."
   - "production p95/p99 latency가 검증됐다."

@@ -1,5 +1,9 @@
 # 2026-05-24 Scored ROI / Swap / PEFT Validation
 
+## 현재 방향성에서의 해석
+
+이 결과는 기존 투트랙 diagnostic의 핵심 묶음이다. 새 방향성에서는 ROI source 비교를 Track B support로, swap/PEFT attach를 Track A path smoke로 분리해 읽는다. trained LoRA gain이나 multi-adapter routing utility claim은 여기서 열지 않는다.
+
 ## 요약
 
 `294b603` 기준 main 작업면에서 M-B~M-F의 initial measured validation pass를 실행했다. 이번 목적은 기존 synthetic proxy score를 소논문 후보 근거로 쓰지 않고, 교체 가능한 proxy 항목을 실제 측정으로 한 단계 낮춰 검증하는 것이다.

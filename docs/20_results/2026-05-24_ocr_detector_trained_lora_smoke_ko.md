@@ -1,5 +1,9 @@
 # 2026-05-24 OCR Detector / Tiny Trained LoRA Smoke
 
+## 현재 방향성에서의 해석
+
+이 결과는 OCR detector ROI와 tiny trained LoRA의 경로 smoke다. 새 방향성에서는 `actual PEFT adapter를 저장/로드할 수 있다`는 Track A path evidence로만 쓰고, LoRA gain이나 OCR ROI generalization claim은 계속 닫아둔다.
+
 ## 요약
 
 `a59c040` 작업면에서 OCR detector ROI와 tiny trained LoRA path를 짧은 real CUDA smoke로 확인했다. 목적은 `layout_proxy_box`를 실제 OCR detector output으로 한 번 교체하고, random PEFT attach를 넘어 학습된 LoRA adapter가 저장/로드되는 경로를 닫는 것이다.

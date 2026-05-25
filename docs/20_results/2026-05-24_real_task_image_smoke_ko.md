@@ -1,5 +1,9 @@
 # 2026-05-24 Real-Task Image Smoke
 
+## 현재 방향성에서의 해석
+
+이 결과는 실제 이미지가 full/low-res/ROI evidence path로 들어가고 CUDA memory/token accounting이 기록되는지 확인한 smoke다. Track A v2에서는 visual evidence cost control 보조 결과이며, adapter utility나 routing claim은 포함하지 않는다.
+
 ## 요약
 
 RTX 3090 단일 장비에서 Qwen3-VL-4B local snapshot을 실제 CUDA로 로드하고, `real_task_manifest`의 고해상도 실제 이미지에 대해 full image, low-res, foveated ROI, oracle ROI, controlled fallback 경로를 같은 C-matrix로 측정했다.

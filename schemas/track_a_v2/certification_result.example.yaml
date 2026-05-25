@@ -1,0 +1,22 @@
+adapter_id: "doc_field_bind_r4_v1"
+run_id: "track_a_v2_certification_example"
+taxonomy:
+  domain: "document"
+  evidence_type: "field_value"
+  operation: "bind_label_to_value"
+  failure_mode: "distractor_confusion"
+scores:
+  base_score: 0.62
+  correct_adapter_score: 0.74
+  wrong_adapter_score: 0.58
+  random_adapter_score: 0.61
+  gain_vs_base: 0.12
+  margin_vs_wrong: 0.16
+  margin_vs_random: 0.13
+  wrong_adapter_damage: 0.16
+score_source: "track_a_v2_certification_runner"
+status: "certified"
+claim_boundary:
+  trained_lora_accuracy_gain_claim: false
+  multi_adapter_routing_utility_claim: false
+  certification_candidate: true
