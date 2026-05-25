@@ -26,6 +26,7 @@ do_not_commit_by_default:
 
 | Date | Brief | Run | Status |
 |---|---|---|---|
+| 2026-05-25 | [External n32 / multi-LoRA bank / Qwen2 backbone sweep](2026-05-25_external_n32_multi_lora_backbone_ko.md) | `20260525T005611Z`, `20260525T005917Z`, `20260525T010610Z`, `20260525T011135Z` | external n32 + multi-adapter + one lightweight backbone diagnostic |
 | 2026-05-24 | [64 unique stability / LoRA holdout / actual PEFT full C-matrix](2026-05-24_unique64_stability_lora_peft_ko.md) | `20260524T114337Z`, `20260524T114456Z`, `roi_stability_64_repeats3_plan` | 64 unique + repeats=3 controlled diagnostic |
 | 2026-05-24 | [P1 answer mask / OCR stability](2026-05-24_p1_answer_mask_ocr_stability_ko.md) | `20260524T105236Z`, `20260524T105933Z` | answer-only mask + n32 cyclic OCR smoke |
 | 2026-05-24 | [OCR detector / tiny trained LoRA smoke](2026-05-24_ocr_detector_trained_lora_smoke_ko.md) | `20260524T095934Z`, `20260524T095906Z` | detector + trained adapter smoke |

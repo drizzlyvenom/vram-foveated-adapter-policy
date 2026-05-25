@@ -71,6 +71,28 @@ def _split_samples(samples: list[dict[str, Any]], split_name: str | None) -> lis
     return selected
 
 
+def _filter_samples(
+    samples: list[dict[str, Any]],
+    *,
+    task_family: str | None = None,
+    taxonomy_label: str | None = None,
+) -> list[dict[str, Any]]:
+    selected = list(samples)
+    if task_family and task_family.lower() not in {"all", "none"}:
+        selected = [
+            sample
+            for sample in selected
+            if str(sample.get("task_family") or "").lower() == task_family.lower()
+        ]
+    if taxonomy_label and taxonomy_label.lower() not in {"all", "none"}:
+        selected = [
+            sample
+            for sample in selected
+            if str(sample.get("taxonomy_label") or "").lower() == taxonomy_label.lower()
+        ]
+    return selected
+
+
 def _limit_samples(samples: list[dict[str, Any]], limit: int | None) -> list[dict[str, Any]]:
     if limit is None or int(limit) <= 0:
         return list(samples)
@@ -296,6 +318,8 @@ def main() -> int:
     parser.add_argument("--max-steps", type=int, default=4)
     parser.add_argument("--train-split", default="train")
     parser.add_argument("--holdout-split", default="holdout")
+    parser.add_argument("--task-family", default=None)
+    parser.add_argument("--taxonomy-label", default=None)
     parser.add_argument("--eval-train-samples", type=int, default=32)
     parser.add_argument("--eval-holdout-samples", type=int, default=32)
     parser.add_argument("--eval-max-new-tokens", type=int, default=8)
@@ -325,10 +349,15 @@ def main() -> int:
     config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
     model_path = resolve_repo_path(config.get("model", {}).get("local_snapshot_path", ""))
     manifest_samples = load_task_manifest(args.manifest, repo_root=REPO_ROOT)
-    train_pool = _split_samples(manifest_samples, str(args.train_split))
+    filtered_samples = _filter_samples(
+        manifest_samples,
+        task_family=args.task_family,
+        taxonomy_label=args.taxonomy_label,
+    )
+    train_pool = _split_samples(filtered_samples, str(args.train_split))
     if not train_pool:
-        train_pool = list(manifest_samples)
-    holdout_pool = _split_samples(manifest_samples, str(args.holdout_split))
+        train_pool = list(filtered_samples)
+    holdout_pool = _split_samples(filtered_samples, str(args.holdout_split))
     train_samples = _limit_samples(train_pool, int(args.max_samples))
     if not train_samples:
         raise RuntimeError("No train samples are available after split filtering.")
@@ -471,6 +500,8 @@ def main() -> int:
         "git_commit": _git_commit(),
         "config_path": str(config_path.relative_to(REPO_ROOT)),
         "manifest_path": str(resolve_repo_path(args.manifest).relative_to(REPO_ROOT)),
+        "task_family_filter": args.task_family,
+        "taxonomy_label_filter": args.taxonomy_label,
         "adapter_dir": str(adapter_dir.relative_to(REPO_ROOT)),
         "latest_adapter_dir": str(latest_dir.relative_to(REPO_ROOT)),
         "hardware": {"gpu": torch.cuda.get_device_name(0)},

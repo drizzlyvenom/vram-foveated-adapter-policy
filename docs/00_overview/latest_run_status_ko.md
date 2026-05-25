@@ -40,6 +40,11 @@ measured_sequential_specialist_swap_smoke_available: true
 measured_full_specialist_joint_residency_available: false
 actual_peft_attach_smoke_available: true
 actual_peft_full_cmatrix_available: true
+external_tiny_manifest_available: true
+external_tiny_n32_validation_available: true
+actual_peft_external_baseline_comparison_available: true
+multi_trained_lora_bank_smoke_available: true
+lightweight_backbone_sweep_available: true
 
 local_only_reference_runs:
   - .local/runs/20260524T090102Z-3090_tiny_scored_validation
@@ -56,6 +61,14 @@ local_only_reference_runs:
   - .local/runs/20260524T105933Z-3090_tiny_scored_ocr_detector
   - .local/runs/20260524T114337Z-tiny_lora_train
   - .local/runs/20260524T114456Z-3090_tiny_scored_trained_lora_full_cmatrix
+  - .local/runs/20260525T005611Z-3090_external_tiny_ocr_detector_n32
+  - .local/runs/20260525T005917Z-3090_external_tiny_trained_lora_n32
+  - .local/runs/20260525T010204Z-tiny_lora_train
+  - .local/runs/20260525T010234Z-tiny_lora_train
+  - .local/runs/20260525T010305Z-tiny_lora_train
+  - .local/runs/20260525T010336Z-tiny_lora_train
+  - .local/runs/20260525T010610Z-multi_lora_bank_smoke
+  - .local/runs/20260525T011135Z-3090_qwen2_vl_2b_external_tiny_n32
   - .local/runs/roi_stability_64_repeats3_plan.json
   - .local/runs/20260524T080046Z-3090_two_track_pilot
   - .local/runs/20260524T072015Z-3090_two_track_pilot
@@ -221,6 +234,51 @@ unique64_stability_lora_peft:
   actual_peft_adapter_memory_source: "actual_loaded_adapter"
 ```
 
+2026-05-25 follow-up에서는 남아 있던 external n=32, baseline-vs-trained, multi-LoRA bank, lightweight backbone sweep를 작은 실측 단위로 닫았다. Git에 남기는 최신 요약문은 [docs/20_results/2026-05-25_external_n32_multi_lora_backbone_ko.md](../20_results/2026-05-25_external_n32_multi_lora_backbone_ko.md)이다.
+
+```yaml
+external_n32_multi_lora_backbone:
+  result_brief: "docs/20_results/2026-05-25_external_n32_multi_lora_backbone_ko.md"
+  external_manifest: ".local/data/external_tiny_manifest/manifest.jsonl"
+  external_manifest_samples: 64
+  external_manifest_sources:
+    lmms-lab/textvqa: 16
+    lmms-lab/DocVQA: 16
+    lmms-lab/ChartQA: 16
+    rootsautomation/RICO-ScreenQA: 16
+  ocr_detector_available: "63/64"
+  primary_n32_manifest: ".local/data/external_tiny_manifest/manifest_ocr_detector_primary_n32.jsonl"
+  primary_n32_distribution:
+    lmms-lab/textvqa: 8
+    lmms-lab/DocVQA: 8
+    lmms-lab/ChartQA: 8
+    rootsautomation/RICO-ScreenQA: 8
+  qwen3_reference_external_run: "20260525T005611Z-3090_external_tiny_ocr_detector_n32"
+  qwen3_reference_scores:
+    C0: 0.850260
+    C3: 0.850260
+    C4: 0.799913
+    C6: 0.694501
+    C7: 0.799913
+  actual_peft_external_run: "20260525T005917Z-3090_external_tiny_trained_lora_n32"
+  actual_peft_external_adapter_memory_source: "actual_loaded_adapter"
+  actual_peft_external_delta_mb: 5.625
+  trained_lora_gain_verdict: "no_gain_observed"
+  multi_lora_bank_run: "20260525T010610Z-multi_lora_bank_smoke"
+  multi_lora_bank_adapters: [document, scene_text, ui_screen, chart]
+  multi_lora_bank_allocated_delta_mb: 22.5
+  multi_lora_correct_score_mean: 0.90625
+  multi_lora_wrong_score_mean: 0.90625
+  multi_lora_wrong_adapter_damage_mean: 0.0
+  qwen2_vl_2b_sweep_run: "20260525T011135Z-3090_qwen2_vl_2b_external_tiny_n32"
+  qwen2_vl_2b_base_after_load_allocated_mb: 4213.307
+  qwen2_vl_2b_scores:
+    C0: 0.681858
+    C3: 0.681858
+    C4: 0.751997
+    C6: 0.644618
+```
+
 ## 3. 현재 claim level
 
 ```yaml
@@ -235,6 +293,10 @@ current_claim_level:
   - trained_lora_actual_peft_load_smoke
   - trained_lora_actual_peft_full_cmatrix_diagnostic
   - ocr_detector_unique64_repeats3_stability_diagnostic
+  - external_tiny_n32_validation_diagnostic
+  - trained_lora_external_baseline_comparison
+  - multi_trained_lora_bank_path_smoke
+  - lightweight_backbone_sweep_one_candidate
   - adapter_card_residency_estimate
   - multi_specialist_resident_estimate
   - sequential_specialist_swap_smoke
@@ -244,9 +306,10 @@ not_yet_claimed:
   - trained_lora_accuracy_gain
   - measured_full_specialist_joint_residency
   - general_benchmark_accuracy
-  - ocr_detector_roi_generalization
-  - external_benchmark_ocr_detector_roi
+  - broad_ocr_detector_roi_generalization
+  - broad_external_benchmark_ocr_detector_roi
   - trained_lora_generalization
+  - multi_lora_routing_accuracy_gain
   - production_latency_or_p99
   - final_milestone_closure_beyond_controlled_tiny_set
 ```
@@ -350,9 +413,9 @@ repeated_issue_audit:
 
 ```yaml
 next_promotion_steps:
-  - replace controlled tiny scored images with external benchmark or human-evaluated task set
-  - compare trained LoRA weights against a clearly defined no-adapter or wrong-adapter baseline before opening accuracy-gain claim
-  - measure LoRA bank switch latency across multiple actual adapters
+  - expand the external benchmark or human-evaluated task set beyond the current tiny n=32 diagnostic
+  - keep trained LoRA accuracy-gain claim closed until baseline improvement appears on stronger held-out/external evidence
+  - design adapter-specific tasks where wrong-adapter damage should be observable
   - measure full specialist joint residency only on larger hardware, or keep it as an explicit estimate
 ```
 
@@ -360,10 +423,10 @@ next_promotion_steps:
 
 ```yaml
 next_validation_queue:
-  - "외부 tiny benchmark subset 또는 사람이 검수한 hold-out image task로 score source 교체"
-  - "trained LoRA accuracy gain claim은 baseline 대비 held-out/external improvement가 확인된 뒤에만 개방"
-  - "multi-trained-LoRA bank routing과 wrong-adapter damage를 별도 adapter bank로 검증"
-  - "Qwen3-VL-4B reference 외 1B~3B 또는 quantized VLM 후보를 가볍게 sweep"
+  - "외부 tiny benchmark는 n=32 diagnostic으로 닫혔고, 다음은 더 큰/사람 검수 subset 확장"
+  - "trained LoRA accuracy gain claim은 현재 no-gain이므로 계속 닫아둠"
+  - "multi-trained-LoRA bank path는 닫혔지만 wrong-adapter damage가 0.0이라 utility claim은 닫아둠"
+  - "Qwen2-VL-2B 1개 후보 sweep은 닫혔고, 다음은 quantized 후보 또는 추가 1B~3B 후보"
 ```
 
 ## 6. 최종 체크리스트
@@ -391,10 +454,17 @@ closed_for_current_milestone:
   - ROI source stability repeats=3 over 64 unique samples
   - answer-only LoRA 32-step train/holdout evaluation
   - trained adapter actual PEFT C0/C3/C4/C5/C6/C7 diagnostic matrix
+  - external tiny manifest 64 samples
+  - external OCR detector primary n=32 balanced manifest
+  - external n=32 Qwen3 reference diagnostic
+  - external n=32 actual PEFT baseline-vs-trained comparison
+  - four domain-specific trained LoRA adapters
+  - multi-trained-LoRA bank load/switch smoke
+  - Qwen2-VL-2B lightweight backbone sweep
 
 needs_next:
-  - external tiny benchmark subset
-  - baseline-vs-trained comparison before any accuracy-gain claim
-  - multi-trained-LoRA bank routing validation
-  - lightweight or quantized backbone sweep
+  - stronger external or human-evaluated subset beyond n=32
+  - adapter-specific task design that exposes wrong-adapter damage
+  - quantized or additional 1B~3B backbone candidates
+  - production p95/p99 only after serving harness exists
 ```

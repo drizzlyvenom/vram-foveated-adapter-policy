@@ -164,13 +164,13 @@ class Qwen3VLRealProbe:
 
         self.torch = torch
         self.device = "cuda:0"
-        self.max_new_tokens = int(max_new_tokens)
-        self.measurement_source = "qwen3_vl_4b_local_cuda_prefill_generate"
         self.run_dir = Path(run_dir)
         self.image_bank = make_probe_images(self.run_dir)
         self.adapter_runtime: dict[str, Any] | None = None
 
         model_path = Path(model_path)
+        self.max_new_tokens = int(max_new_tokens)
+        self.measurement_source = f"{model_path.name}_local_cuda_prefill_generate"
         dtype = _dtype_from_name(torch, dtype_name)
         started = time.perf_counter()
         self.processor = AutoProcessor.from_pretrained(

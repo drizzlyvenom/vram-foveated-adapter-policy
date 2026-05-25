@@ -1,0 +1,73 @@
+run:
+  name: "3090_qwen2_vl_2b_external_tiny_n32"
+  output_dir: ".local/runs"
+  seed: 42
+  dry_run: false
+  max_samples: 32
+  allow_incomplete_matrix: true
+
+hardware:
+  target_gpu: "NVIDIA GeForce RTX 3090"
+  vram_budget_mb: 24576
+  normal_path_budget_mb: 22000
+
+model:
+  shared_backbone_id: "Qwen/Qwen2-VL-2B-Instruct"
+  dtype: "float16"
+  local_snapshot_path: ".local/hf_cache/hub/models--Qwen--Qwen2-VL-2B-Instruct/snapshots/895c3a49bc3fa70a340399125c650a463535e71c"
+
+data:
+  mode: "tiny_scored_manifest"
+  manifest_path: ".local/data/external_tiny_manifest/manifest_ocr_detector_primary_n32.jsonl"
+  roi_source: "ocr_detector_box"
+  real_task_validation_required_for_promotion: true
+  external_benchmark_subset: true
+  backbone_sweep_candidate: "Qwen/Qwen2-VL-2B-Instruct"
+
+model_residency_axis:
+  M0_shared_backbone_only:
+    enabled: true
+  M1_multi_specialist_baseline:
+    enabled: true
+    mode: "resident_estimate_and_sequential_swap"
+    resident_estimate_method: "same_backbone_after_load_times_count"
+    measured_sequential_swap_available: false
+    measured_joint_residency_available: false
+    specialist_models:
+      - id: "doc_specialist_proxy"
+      - id: "ocr_specialist_proxy"
+      - id: "ui_specialist_proxy"
+      - id: "chart_specialist_proxy"
+  M3_shared_backbone_taxonomy_lora:
+    enabled: true
+
+adapter_bank:
+  registry_path: "configs/3090/adapter_cards.yaml"
+  execution_mode: "proxy_card_accounting"
+  active_adapters_per_request: 1
+  routing_granularity: "request_or_roi_level"
+  allow_token_level_switching: false
+
+combined_matrix:
+  cells:
+    - id: "C0"
+      model: "M0_shared_backbone_only"
+      visual: "V0_full_fixed_image"
+    - id: "C3"
+      model: "M3_shared_backbone_taxonomy_lora"
+      visual: "V0_full_fixed_image"
+    - id: "C4"
+      model: "M3_shared_backbone_taxonomy_lora"
+      visual: "V2_foveater_roi"
+    - id: "C6"
+      model: "M3_shared_backbone_taxonomy_lora"
+      visual: "V1_low_res_only"
+
+claim_boundary:
+  allow_final_performance_claim: false
+  allow_trained_lora_gain_claim: false
+  allow_production_p99_claim: false
+  allow_feasibility_claim: true
+  external_subset_claim_only: true
+  lightweight_backbone_sweep: true
+  ocr_detector_roi_claim_requires_available_boxes: true
