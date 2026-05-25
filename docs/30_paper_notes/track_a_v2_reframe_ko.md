@@ -373,17 +373,22 @@ Track B 문구는 다음 정도로 제한한다.
 We use a foveated evidence path as a controlled input-cost module for adapter certification.
 ```
 
-## 10. 다음 작업
+## 10. 2026-05-25 진단 폐쇄 이후 작업
 
 ```yaml
-next_commit_theme:
-  name: "Track A v2 Simula compiler scaffold"
-  tasks:
-    - add AdapterCard v2 schema
-    - add Simula curriculum manifest schema
-    - add adapter-sensitive manifest generator
-    - add base/correct/wrong/random certification runner
-    - update README and paper outline around Track A v2
+closed:
+  - AdapterCard v2 schema
+  - Simula curriculum manifest schema
+  - adapter-sensitive manifest generator
+  - Gemma teacher runner with deterministic fallback boundary
+  - base audit / LoRA train / certification / router runners
+  - M0-M11 diagnostic closure table
+
+next:
+  - fix Gemma GGUF/mmproj llama.cpp runtime crash
+  - replace proxy base/wrong/random certification with actual measured comparisons
+  - extend actual LoRA training to scene_text and ui_screen
+  - reopen router utility only after actual correct-vs-wrong/random margin
 ```
 
 ## 11. 새 논문 제목 후보
@@ -436,8 +441,8 @@ contributions:
 say:
   - "Track A is the main research axis."
   - "Track B is a supporting input-cost control module."
-  - "Current Track A results are path smoke plus negative evidence."
-  - "The next goal is adapter-sensitive certification."
+  - "Current Track A results close the diagnostic scaffold, not the promotion claim."
+  - "The next goal is fully actual adapter-sensitive certification."
 
 do_not_say:
   - "Track B is the main contribution."

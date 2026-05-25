@@ -30,6 +30,11 @@ Status: claim boundary draft
 | trained LoRA를 외부 n=32 baseline과 비교했다. | `20260525T005917Z-3090_external_tiny_trained_lora_n32`, C0=0.850260, C3=0.850260 | gain 없음, gain claim 닫힘 |
 | 실제 domain-specific LoRA 4개를 multi-adapter bank로 로드하고 switching smoke를 실행했다. | `20260525T010610Z-multi_lora_bank_smoke`, bank delta 22.5MB | wrong-adapter damage 0.0, routing utility claim 아님 |
 | Qwen2-VL-2B를 lightweight backbone 후보로 한 번 sweep했다. | `20260525T011135Z-3090_qwen2_vl_2b_external_tiny_n32` | final low-end backbone claim 아님 |
+| Track A v2 AdapterCard / curriculum / certification scaffold가 구현됐다. | `schemas/track_a_v2/`, `src/vfa_policy/track_a/`, Track A v2 scripts | scaffold 및 진단 폐쇄, utility claim 아님 |
+| adapter-sensitive synthetic manifest 256개와 curriculum manifest가 생성됐다. | `2026-05-25_track_a_v2_dataset_brief_ko.md`, `2026-05-25_track_a_v2_teacher_curriculum_brief_ko.md` | synthetic/local diagnostic |
+| Gemma 4 26B GGUF/mmproj teacher 실행을 시도했고 fallback annotation으로 compiler path를 닫았다. | `2026-05-25_track_a_v2_teacher_curriculum_brief_ko.md`, final closure brief | Gemma model JSON success claim 아님 |
+| document/chart Track A v2 LoRA를 실제 학습/holdout 평가했다. | `2026-05-25_track_a_v2_single_lora_learns_ko.md` | base/wrong/random은 아직 mixed/proxy |
+| Track A v2 M0-M11은 진단 폐쇄로 닫혔다. | `2026-05-25_track_a_v2_final_closure_ko.md`, milestone doc | paper-ready 성능 claim은 false |
 
 ## Safe After New Runs
 
@@ -42,6 +47,7 @@ Status: claim boundary draft
 | controlled result가 넓은 외부 benchmark에서도 유지된다. | 현재 n=32보다 큰 external 또는 human-evaluated subset |
 | trained LoRA accuracy gain을 주장할 수 있다. | 명확한 baseline 대비 held-out/external improvement |
 | multi-adapter routing utility를 주장할 수 있다. | adapter-specific task에서 wrong-adapter damage와 correct-adapter recovery가 관측됨 |
+| Gemma teacher annotation을 실제 teacher evidence로 쓸 수 있다. | llama.cpp 또는 대체 backend에서 valid JSON teacher output 확보 |
 
 ## Not Yet
 
@@ -49,7 +55,7 @@ Status: claim boundary draft
 |---|---|
 | Track B가 현재 메인 논문 기여다. | 새 방향성에서는 Track B를 visual evidence cost control 보조 모듈로 제한 |
 | Gemma teacher label이 최종 ground truth다. | teacher annotation은 candidate supervision이며 certification은 별도 heldout gate로 닫아야 함 |
-| Simula compiler가 이미 구현/검증됐다. | 현재는 reframe/planning 단계이며 schema와 runner가 다음 작업 |
+| Simula compiler가 adapter utility를 이미 증명했다. | compiler path는 구현됐지만 Gemma는 fallback이고 certification 일부가 proxy |
 | 일반 benchmark에서도 score retention이 유지된다. | 현재는 외부 n=32 tiny diagnostic뿐이라 broad benchmark가 아님 |
 | trained LoRA가 baseline보다 정확도를 향상한다. | 외부 n=32 baseline 비교에서 gain이 관측되지 않음 |
 | tiny trained LoRA가 일반화된다. | 현재는 controlled tiny set holdout 평가 |

@@ -31,7 +31,31 @@ current_interpretation:
   track_b_results: "supporting input-cost evidence"
   external_n32_lora_no_gain: "negative evidence that current task/taxonomy is not adapter-sensitive"
   multi_lora_wrong_damage_zero: "motivation for adapter-sensitive dataset redesign"
-  next_gate: "single LoRA learns -> correct beats wrong -> router selects adapter"
+  latest_track_a_v2_closure: "M0-M11 diagnostic closure recorded; promotion gate remains false"
+  next_gate: "replace proxy certification pieces with actual measured base/correct/wrong/random comparisons"
+```
+
+최신 Track A v2 마일스톤 상태는 다음처럼 읽는다.
+
+```yaml
+track_a_v2_milestone_closure:
+  canonical_milestone_doc: "docs/30_paper_notes/track_a_v2_validation_milestones_ko.md"
+  canonical_result_brief: "docs/20_results/2026-05-25_track_a_v2_final_closure_ko.md"
+  closure_meaning: "실행 산출물과 pass/fail/claim boundary를 기록한 진단 폐쇄"
+  promotion_gate: false
+  status:
+    M0_reframe_lock: closed
+    M1_schema_registry: closed
+    M2_adapter_sensitive_dataset: closed
+    M3_simula_teacher_compiler: closed_with_fallback
+    M4_base_difficulty_audit: closed_as_proxy
+    M5_single_lora_learns: closed
+    M6_correct_beats_wrong: closed_as_mixed_evidence
+    M7_adaptercard_certification: closed
+    M8_taxonomy_router: closed_as_path
+    M9_multi_adapter_bank: closed
+    M10_compatibility_collapse: closed_as_smoke
+    M11_paper_ready_table: closed_negative
 ```
 
 ## 1. 현재 커밋된 상태
@@ -453,9 +477,10 @@ repeated_issue_audit:
 
 ```yaml
 next_promotion_steps:
-  - define AdapterCard v2 and Simula curriculum manifest
-  - build adapter-sensitive train/holdout tasks where a single LoRA can first overfit and then generalize modestly
-  - compare base/correct/wrong/random adapters before claiming any LoRA utility
+  - fix Gemma GGUF/mmproj llama.cpp runtime crash before claiming actual teacher annotation
+  - replace proxy base/wrong/random certification scores with actual measured comparisons
+  - extend actual LoRA training from document/chart to scene_text/ui_screen
+  - compare fully actual base/correct/wrong/random adapters before claiming any LoRA utility
   - keep trained LoRA accuracy-gain and multi-adapter routing utility claims closed until the new gates pass
   - keep Track B as visual evidence cost control, not as the main contribution
 ```
@@ -464,9 +489,9 @@ next_promotion_steps:
 
 ```yaml
 next_validation_queue:
-  - "AdapterCard v2 schema와 certification fields 정리"
-  - "Simula curriculum manifest schema 정리"
   - "Gemma 4 26B teacher annotation은 후보 label로만 쓰고, heldout certification으로 검증"
+  - "Gemma GGUF/mmproj llama.cpp runtime crash 원인 확인"
+  - "base/wrong/random proxy score를 actual measured comparison으로 교체"
   - "adapter-specific task design으로 wrong-adapter damage가 실제로 드러나는지 확인"
   - "trained LoRA accuracy gain claim은 현재 no-gain이므로 계속 닫아둠"
   - "multi-trained-LoRA bank path는 닫혔지만 wrong-adapter damage가 0.0이라 utility claim은 닫아둠"
@@ -506,6 +531,15 @@ closed_for_current_milestone:
   - four domain-specific trained LoRA adapters
   - multi-trained-LoRA bank load/switch smoke
   - Qwen2-VL-2B lightweight backbone sweep
+  - Track A v2 AdapterCard schema/checker examples
+  - Track A v2 256-sample adapter-sensitive manifest
+  - Gemma teacher runtime attempt with deterministic fallback annotations
+  - Simula curriculum manifest compile path
+  - Track A v2 base difficulty proxy audit
+  - document/chart actual LoRA train/holdout evaluation
+  - AdapterCard certification records with mixed/proxy boundary
+  - taxonomy router path evaluation
+  - Track A v2 final M0-M11 diagnostic closure table
 
 needs_next:
   - fix Gemma GGUF/mmproj llama.cpp runtime crash before claiming actual teacher annotation

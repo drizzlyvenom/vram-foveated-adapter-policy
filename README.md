@@ -29,6 +29,7 @@ Track B support. Visual evidence cost control
 
 - Track A v2 reframe: `docs/30_paper_notes/track_a_v2_reframe_ko.md`
 - Track A v2 validation milestones: `docs/30_paper_notes/track_a_v2_validation_milestones_ko.md`
+- Track A v2 final closure brief: `docs/20_results/2026-05-25_track_a_v2_final_closure_ko.md`
 - 3090 validation guideline: `docs/00_overview/3090_two_track_validation_guideline_ko.md`
 - docs index: `docs/README.md`
 - latest local run status: `docs/00_overview/latest_run_status_ko.md`
@@ -131,6 +132,21 @@ Tiny trained LoRA smoke:
 .venv\Scripts\python.exe scripts\train_tiny_lora_smoke.py --manifest .local\data\tiny_scored_manifest\manifest_ocr_detector.jsonl --roi-source ocr_detector_box --max-samples 32 --max-steps 32 --eval-train-samples 32 --eval-holdout-samples 32 --eval-max-new-tokens 8 --rank 4 --alpha 8 --learning-rate 1e-4 --label-mask-mode answer_only
 .venv\Scripts\python.exe scripts\run_3090_two_track_validation.py --config configs\3090\tiny_scored_trained_lora_full_cmatrix.yaml --real-run --max-samples 64 --max-new-tokens 8
 ```
+
+Track A v2 diagnostic closure path:
+
+```powershell
+.venv\Scripts\python.exe scripts\check_track_a_v2_schemas.py
+.venv\Scripts\python.exe scripts\prepare_adapter_sensitive_manifest.py --samples-per-taxonomy-split 32 --output .local\data\track_a_v2_adapter_sensitive\manifest.jsonl
+.venv\Scripts\python.exe scripts\run_gemma_teacher_gguf.py --manifest .local\data\track_a_v2_adapter_sensitive\manifest.jsonl --output .local\data\track_a_v2_adapter_sensitive\teacher_annotations.jsonl --max-per-taxonomy 1 --allow-deterministic-fallback
+.venv\Scripts\python.exe scripts\compile_simula_curriculum.py --manifest .local\data\track_a_v2_adapter_sensitive\manifest.jsonl --teacher-annotations .local\data\track_a_v2_adapter_sensitive\teacher_annotations.jsonl --output .local\data\track_a_v2_adapter_sensitive\curriculum_manifest.jsonl
+.venv\Scripts\python.exe scripts\run_track_a_v2_base_audit.py --curriculum .local\data\track_a_v2_adapter_sensitive\curriculum_manifest.jsonl --output .local\runs\track_a_v2_base_audit\base_audit_result.json
+.venv\Scripts\python.exe scripts\train_track_a_v2_lora.py --curriculum .local\data\track_a_v2_adapter_sensitive\curriculum_manifest.jsonl --taxonomies document,chart --max-steps 32 --max-samples 32 --eval-train-samples 32 --eval-holdout-samples 32
+.venv\Scripts\python.exe scripts\run_track_a_v2_certification.py --curriculum .local\data\track_a_v2_adapter_sensitive\curriculum_manifest.jsonl --lora-summary .local\runs\track_a_v2_lora_summary\single_lora_learns_summary.json --output .local\runs\track_a_v2_certification\certification_result.json
+.venv\Scripts\python.exe scripts\run_track_a_v2_router_eval.py --certification .local\runs\track_a_v2_certification\certification_result.json --output .local\runs\track_a_v2_router_eval\router_eval_result.json
+```
+
+위 Track A v2 경로는 M0-M11 진단 폐쇄를 재현하는 scaffold다. 현재 Gemma teacher JSON, fully actual correct-vs-wrong/random margin, router utility, paper-ready 성능 claim은 열지 않는다.
 
 ROI source stability plan:
 

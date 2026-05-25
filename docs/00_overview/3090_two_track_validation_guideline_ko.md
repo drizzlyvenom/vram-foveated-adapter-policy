@@ -117,6 +117,11 @@ external_n32_multi_lora:
   status: negative_adapter_sensitivity_evidence
   use_for: motivate adapter-sensitive task redesign
 
+track_a_v2_m0_m11:
+  status: diagnostic_closure_recorded
+  use_for: schema/runner/result-table scaffold and claim-boundary evidence
+  boundary: "Gemma teacher JSON, fully actual certification, router utility, paper-ready claim remain closed"
+
 lewm_jepa_graph_memory:
   status: future_or_ablation
   use_for: later outcome-prediction or memory extension

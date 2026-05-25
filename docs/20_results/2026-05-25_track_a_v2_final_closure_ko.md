@@ -17,6 +17,7 @@ adapter_sensitive_manifest_samples: 256
 actual_lora_taxonomies: ["document", "chart"]
 multi_adapter_bank_run: "20260525T030429Z-multi_lora_bank_smoke"
 promotion_gate: false
+docs_sync_status: "updated"
 ```
 
 ## 마일스톤 상태
@@ -77,3 +78,25 @@ Not yet:
 - Correct-vs-wrong/random margin is fully actual measured evidence.
 - Multi-adapter routing improves accuracy.
 - Paper-ready Track A performance claim.
+
+## 문서 최신화
+
+마일스톤 기준 문서와 active index를 같은 해석으로 맞췄다.
+
+```yaml
+synced_docs:
+  - "docs/30_paper_notes/track_a_v2_validation_milestones_ko.md"
+  - "docs/00_overview/latest_run_status_ko.md"
+  - "docs/README.md"
+  - "docs/20_results/README.md"
+  - "docs/30_paper_notes/claim_table_ko.md"
+  - "docs/30_paper_notes/ablation_table_plan_ko.md"
+  - "docs/30_paper_notes/paper_outline_ko.md"
+  - "docs/30_paper_notes/track_a_v2_reframe_ko.md"
+
+remaining_next:
+  - "Gemma GGUF/mmproj llama.cpp runtime crash investigation"
+  - "fully actual base/correct/wrong/random certification"
+  - "scene_text/ui_screen actual LoRA train and holdout evaluation"
+  - "router utility claim only after actual adapter margin"
+```

@@ -8,9 +8,10 @@ Status: Track A v2 table plan
 
 | Adapter | Taxonomy | Train samples | Holdout samples | Base score | Correct score | Wrong score | Random score | Status |
 |---|---|---:|---:|---:|---:|---:|---:|---|
-| doc_field_bind_r4_v1 | document / field_value / bind_label_to_value / distractor_confusion | planned | planned | measured | measured | measured | measured | experimental |
-| chart_cell_locate_r4_v1 | chart / table_cell / locate / label_value_mismatch | planned | planned | measured | measured | measured | measured | experimental |
-| ui_status_bind_r4_v1 | ui_screen / ui_status / bind_label_to_value / distractor_confusion | planned | planned | measured | measured | measured | measured | experimental |
+| document_track_a_v2_r4_v1 | document / field_value / bind_label_to_value / distractor_confusion | 32 | 32 | 0.502646 proxy | 0.718750 actual | 0.492646 proxy | 0.502646 proxy | mixed evidence, claim closed |
+| chart_track_a_v2_r4_v1 | chart / table_cell / locate / label_value_mismatch | 32 | 32 | 0.412646 proxy | 0.750000 actual | 0.402646 proxy | 0.412646 proxy | mixed evidence, claim closed |
+| scene_text_track_a_v2_r4_v1 | scene_text / small_text / read / tiny_text_blur | 32 planned | 32 planned | planned | planned | planned | planned | next |
+| ui_status_bind_r4_v1 | ui_screen / ui_status / bind_label_to_value / distractor_confusion | 32 planned | 32 planned | planned | planned | planned | planned | next |
 
 ## Table 2. Gate Progress
 
@@ -18,9 +19,9 @@ Status: Track A v2 table plan
 
 | Gate | Required comparison | Pass metric | Current status | Claim opened |
 |---|---|---|---|---|
-| Single LoRA Learns | base vs correct LoRA | train/holdout gain or labeled overfit smoke | next | no |
-| Correct Beats Wrong | correct vs wrong/random | margin vs wrong/random | next | no |
-| Router Selects Adapter | routed vs oracle adapter | routed score near oracle, top1 > random | blocked until prior gate | no |
+| Single LoRA Learns | base vs correct LoRA | train/holdout gain or labeled overfit smoke | document/chart path closed | no |
+| Correct Beats Wrong | correct vs wrong/random | margin vs wrong/random | mixed/proxy only | no |
+| Router Selects Adapter | routed vs oracle adapter | routed score near oracle, top1 > random | path closed, utility blocked | no |
 | Resident Cost | shared backbone + bank vs specialist estimate | memory/switch cost | path smoke available | limited accounting only |
 
 ## Table 3. Existing Diagnostic Boundary
@@ -67,4 +68,15 @@ Status: Track A v2 table plan
 .venv\Scripts\python.exe scripts\run_roi_source_stability.py --config configs\3090\tiny_scored_roi_stability_64.yaml --manifest .local\data\tiny_scored_manifest\manifest_ocr_detector.jsonl --max-samples 64 --repeats 3 --max-new-tokens 8 --execute --output .local\runs\roi_stability_64_repeats3_plan.json
 ```
 
-위 명령은 기존 Track B support table 재현용이다. 새 Track A v2 execution plan은 AdapterCard v2 schema, Simula curriculum manifest, base/correct/wrong/random certification runner가 생긴 뒤 추가한다.
+위 명령은 기존 Track B support table 재현용이다. Track A v2 M0-M11 closure 재현은 아래 순서로 본다.
+
+```powershell
+.venv\Scripts\python.exe scripts\check_track_a_v2_schemas.py
+.venv\Scripts\python.exe scripts\prepare_adapter_sensitive_manifest.py --samples-per-taxonomy-split 32 --output .local\data\track_a_v2_adapter_sensitive\manifest.jsonl
+.venv\Scripts\python.exe scripts\run_gemma_teacher_gguf.py --manifest .local\data\track_a_v2_adapter_sensitive\manifest.jsonl --output .local\data\track_a_v2_adapter_sensitive\teacher_annotations.jsonl --max-per-taxonomy 1 --allow-deterministic-fallback
+.venv\Scripts\python.exe scripts\compile_simula_curriculum.py --manifest .local\data\track_a_v2_adapter_sensitive\manifest.jsonl --teacher-annotations .local\data\track_a_v2_adapter_sensitive\teacher_annotations.jsonl --output .local\data\track_a_v2_adapter_sensitive\curriculum_manifest.jsonl
+.venv\Scripts\python.exe scripts\train_track_a_v2_lora.py --curriculum .local\data\track_a_v2_adapter_sensitive\curriculum_manifest.jsonl --taxonomies document,chart --max-steps 32 --max-samples 32 --eval-train-samples 32 --eval-holdout-samples 32
+.venv\Scripts\python.exe scripts\run_track_a_v2_certification.py --curriculum .local\data\track_a_v2_adapter_sensitive\curriculum_manifest.jsonl --lora-summary .local\runs\track_a_v2_lora_summary\single_lora_learns_summary.json --output .local\runs\track_a_v2_certification\certification_result.json
+```
+
+주의: 현재 certification table은 correct score만 actual LoRA evaluation이고, base/wrong/random은 mixed/proxy다. 논문용 utility claim은 fully actual 비교가 생긴 뒤에만 연다.

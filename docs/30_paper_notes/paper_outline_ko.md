@@ -40,7 +40,8 @@ results:
   - existing result recap: Track B support and Track A path smoke
   - negative result: external n32 trained LoRA no gain
   - negative result: multi-LoRA bank wrong-adapter damage 0.0
-  - new target table: AdapterCard certification gates
+  - Track A v2 M0-M11 diagnostic closure table
+  - new target table: fully actual AdapterCard certification gates
 
 limitations:
   - controlled tiny set, not broad benchmark
@@ -51,12 +52,17 @@ limitations:
   - Qwen3-VL-4B is a reference backbone, not a lightweight target sweep
   - production p95/p99 out of scope
 
-next_work:
+closed_scaffold:
   - AdapterCard v2 schema
   - Simula curriculum manifest schema
   - adapter-sensitive manifest generator
   - base/correct/wrong/random certification runner
-  - router gate only after correct beats wrong
+
+next_work:
+  - fix Gemma GGUF/mmproj runtime crash before claiming teacher JSON evidence
+  - replace proxy base/wrong/random certification scores with actual measured comparisons
+  - train/evaluate scene_text and ui_screen adapters
+  - router gate only after actual correct beats wrong/random
 ```
 
 ## 2.1 Backbone 역할 분리

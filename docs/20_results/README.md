@@ -9,7 +9,8 @@ current_interpretation:
   roi_and_cmatrix_results: "Track B support / visual evidence cost control"
   actual_peft_and_multi_lora_results: "Track A path smoke"
   external_n32_no_gain: "negative evidence that current task/taxonomy is not adapter-sensitive"
-  next_use: "AdapterCard v2 and Simula curriculum design input"
+  track_a_v2_m0_m11: "diagnostic closure with promotion gate false"
+  next_use: "actual Gemma teacher recovery and fully measured certification input"
 ```
 
 ## 원칙
@@ -36,7 +37,7 @@ do_not_commit_by_default:
 
 | Date | Brief | Run | Status |
 |---|---|---|---|
-| 2026-05-25 | [Track A v2 final milestone closure](2026-05-25_track_a_v2_final_closure_ko.md) | `20260525T030210Z`, `20260525T030309Z`, `20260525T030429Z` | M0-M11 diagnostic closure, promotion gate false |
+| 2026-05-25 | [Track A v2 final milestone closure](2026-05-25_track_a_v2_final_closure_ko.md) | `20260525T030210Z`, `20260525T030309Z`, `20260525T030429Z` | M0-M11 diagnostic closure, docs synced, promotion gate false |
 | 2026-05-25 | [Track A v2 router / bank closure](2026-05-25_track_a_v2_router_bank_closure_ko.md) | `track_a_v2_router_eval`, `20260525T030429Z` | router path + multi-adapter bank smoke |
 | 2026-05-25 | [Track A v2 certification](2026-05-25_track_a_v2_certification_ko.md) | `track_a_v2_certification` | AdapterCard certification with mixed/proxy boundary |
 | 2026-05-25 | [Track A v2 single LoRA learns](2026-05-25_track_a_v2_single_lora_learns_ko.md) | `20260525T030210Z`, `20260525T030309Z` | actual document/chart LoRA training |

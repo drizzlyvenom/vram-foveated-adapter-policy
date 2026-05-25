@@ -1,13 +1,15 @@
 # Track A v2 검증 마일스톤
 
-Status: validation milestone draft
+Status: M0-M11 diagnostic closure recorded / promotion gate closed
 Date: 2026-05-25
+Last updated: 2026-05-25
 Scope: Simula-compiled taxonomy LoRA bank / Track A 중심 재정렬
 Recommended repo path: `docs/30_paper_notes/track_a_v2_validation_milestones_ko.md`
 
 Closure update: 2026-05-25
 
 ```yaml
+closure_meaning: "각 마일스톤의 실행 산출물과 pass/fail/claim boundary를 기록했다는 뜻이며, paper-ready 성능 claim을 열었다는 뜻은 아니다."
 closure_status:
   M0: closed
   M1: closed
@@ -23,6 +25,10 @@ closure_status:
   M11: closed_negative
 promotion_gate: false
 canonical_result_brief: "docs/20_results/2026-05-25_track_a_v2_final_closure_ko.md"
+next_focus:
+  - "Gemma GGUF/mmproj runtime crash 원인 확인"
+  - "proxy base/wrong/random 점수를 actual measured comparison으로 교체"
+  - "scene_text/ui_screen actual LoRA training 확장"
 ```
 
 ---
@@ -770,23 +776,34 @@ do_not_do_now:
 
 ---
 
-## 15. Codex Immediate Queue
+## 15. Closure Queue Result
 
 ```yaml
-next_commit_theme:
-  name: "Track A v2 Simula compiler scaffold"
+closed_commit_theme:
+  name: "Track A v2 diagnostic milestone closure"
 
-tasks:
-  - add `schemas/track_a_v2/adapter_card_v2.example.yaml`
-  - add `schemas/track_a_v2/curriculum_manifest.example.jsonl`
-  - add `schemas/track_a_v2/certification_result.example.yaml`
-  - add `src/vfa_policy/track_a/taxonomy.py`
-  - add `src/vfa_policy/track_a/adapter_card.py`
-  - add `scripts/prepare_adapter_sensitive_manifest.py`
-  - add `scripts/run_track_a_v2_base_audit.py`
-  - add `scripts/train_track_a_v2_lora.py`
-  - add `scripts/run_track_a_v2_certification.py`
-  - keep README/docs wording synced with Track A v2 as main paper axis
+completed:
+  - "schemas/track_a_v2/adapter_card_v2.example.yaml"
+  - "schemas/track_a_v2/curriculum_manifest.example.jsonl"
+  - "schemas/track_a_v2/teacher_annotation.example.jsonl"
+  - "schemas/track_a_v2/certification_result.example.yaml"
+  - "schemas/track_a_v2/compatibility_edge.example.yaml"
+  - "src/vfa_policy/track_a/taxonomy.py"
+  - "src/vfa_policy/track_a/adapter_card.py"
+  - "scripts/prepare_adapter_sensitive_manifest.py"
+  - "scripts/run_gemma_teacher_gguf.py"
+  - "scripts/compile_simula_curriculum.py"
+  - "scripts/run_track_a_v2_base_audit.py"
+  - "scripts/train_track_a_v2_lora.py"
+  - "scripts/run_track_a_v2_certification.py"
+  - "scripts/run_track_a_v2_router_eval.py"
+  - "README/docs wording synced with Track A v2 as main paper axis"
+
+not_opened:
+  - "Gemma teacher JSON success claim"
+  - "fully actual correct-vs-wrong/random certification claim"
+  - "router utility claim"
+  - "paper-ready performance claim"
 ```
 
 ---
@@ -801,7 +818,7 @@ and certified LoRA adapters can be selected by taxonomy on a shared VLM backbone
 ```
 
 현재는 이 문장을 주장할 준비가 되지 않았다.
-다음 마일스톤은 이 문장을 닫기 위한 검증 단계다.
+M0-M11은 진단 폐쇄로 닫혔고, 다음 phase는 proxy를 actual certification evidence로 교체하는 단계다.
 
 ## 17. 2026-05-25 Closure Record
 
@@ -831,4 +848,22 @@ important_boundary:
   certification: "correct LoRA scores actual, base/wrong/random mixed proxy"
   router_utility_claim: false
   paper_ready_claim: false
+
+docs_synced:
+  - "README.md"
+  - "docs/README.md"
+  - "docs/00_overview/latest_run_status_ko.md"
+  - "docs/20_results/README.md"
+  - "docs/20_results/2026-05-25_track_a_v2_final_closure_ko.md"
+  - "docs/30_paper_notes/claim_table_ko.md"
+  - "docs/30_paper_notes/ablation_table_plan_ko.md"
+  - "docs/30_paper_notes/paper_outline_ko.md"
+  - "docs/30_paper_notes/track_a_v2_reframe_ko.md"
+
+needs_next:
+  - "fix Gemma GGUF/mmproj llama.cpp runtime crash before claiming actual teacher annotation"
+  - "replace proxy base/wrong/random certification scores with actual measured comparisons"
+  - "extend actual LoRA training from document/chart to scene_text/ui_screen"
+  - "router-selects-adapter utility only after actual correct-vs-wrong/random margin"
+  - "production p95/p99 only after serving harness exists"
 ```

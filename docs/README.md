@@ -27,6 +27,13 @@ protocols:
 
 results:
   - docs/20_results/README.md
+  - docs/20_results/2026-05-25_track_a_v2_final_closure_ko.md
+  - docs/20_results/2026-05-25_track_a_v2_router_bank_closure_ko.md
+  - docs/20_results/2026-05-25_track_a_v2_certification_ko.md
+  - docs/20_results/2026-05-25_track_a_v2_single_lora_learns_ko.md
+  - docs/20_results/2026-05-25_track_a_v2_base_audit_ko.md
+  - docs/20_results/2026-05-25_track_a_v2_teacher_curriculum_brief_ko.md
+  - docs/20_results/2026-05-25_track_a_v2_dataset_brief_ko.md
   - docs/20_results/2026-05-25_external_n32_multi_lora_backbone_ko.md
   - docs/20_results/2026-05-24_unique64_stability_lora_peft_ko.md
   - docs/20_results/2026-05-24_p1_answer_mask_ocr_stability_ko.md
@@ -55,6 +62,11 @@ current_direction:
   teacher: "Gemma 4 26B as offline annotator and curriculum generator"
   compiler: "Simula as offline LoRA curriculum compiler"
   support_axis: "Track B as visual evidence cost control"
+  latest_closure: "Track A v2 M0-M11 diagnostic closure recorded; promotion gate false"
+  next_focus:
+    - "Gemma runtime crash investigation"
+    - "actual base/correct/wrong/random certification"
+    - "scene_text/ui_screen LoRA extension"
   closed_claims:
     - trained LoRA accuracy gain
     - multi-adapter routing utility
